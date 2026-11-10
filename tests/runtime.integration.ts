@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { Miniflare } from "miniflare";
 import { sha256 } from "../src/domain.ts";
 
@@ -14,14 +14,16 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
   });
   t.after(() => mf.dispose());
   const db = await mf.getD1Database("DB");
-  const sql = await readFile("migrations/0001_initial.sql", "utf8");
-  for (const statement of sql.split("\n").filter(line => !line.trimStart().startsWith("--")).join("\n").split(";").map(s => s.trim()).filter(Boolean)) await db.prepare(statement).run();
+  for (const file of (await readdir("migrations")).filter(f => f.endsWith(".sql")).sort()) {
+    const sql = await readFile("migrations/" + file, "utf8");
+    for (const statement of sql.split("\n").filter(l => !l.trimStart().startsWith("--")).join("\n").split(/;(?=\s*(?:CREATE|ALTER|INSERT|PRAGMA|$))/).map(s => s.trim()).filter(Boolean)) await db.prepare(statement).run();
+  }
   const tokenA = "testA_" + crypto.randomUUID().replaceAll("-", "");
   const tokenB = "testB_" + crypto.randomUUID().replaceAll("-", "");
   for (const [tenant, token] of [["a", tokenA], ["b", tokenB]]) {
     await db.prepare("INSERT INTO tenants VALUES (?,?)").bind(tenant, "Synthetic agency").run();
     await db.prepare("INSERT INTO clients VALUES (?,?,?,?)").bind(tenant, "client", "Synthetic client", "UTC").run();
-    await db.prepare("INSERT INTO principals VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read"]').run();
+    await db.prepare("INSERT INTO principals VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt"]').run();
     await db.prepare("INSERT INTO client_grants VALUES (?,?,?)").bind(tenant, "agent", "client").run();
   }
   const call = async (name: string, args: Record<string, unknown>, token = tokenA) => {
@@ -82,6 +84,20 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
     await db.prepare("INSERT INTO clients VALUES ('a','ungranted','Synthetic ungranted client','UTC')").run();
     assert.equal((await call("list_metrics", { clientId: "ungranted" })).isError, true);
     assert.equal((await call("define_metric", { ...definition, clientId: "ungranted" })).isError, true);
+  });
+  await t.test("client, project and content writes are exposed through MCP", async () => {
+    const client = decode(await call("create_client", { clientId: "new-client", name: "Synthetic account", timezone: "UTC", expectedRevision: 0, idempotencyKey: "new-client-key" }));
+    assert.equal(client.revision, 1);
+    const clients = decode(await call("list_clients", {}));
+    assert.equal(clients.find((c: { id: string }) => c.id === "new-client").revision, 1);
+    decode(await call("update_client", { clientId: "new-client", name: "Renamed", timezone: "UTC", expectedRevision: 1, idempotencyKey: "update-client-key" }));
+    decode(await call("create_project", { clientId: "new-client", projectId: "one-off", kind: "one_off_project", name: "Launch", description: "Synthetic one-off project", status: "active", metricIds: [], expectedRevision: 0, idempotencyKey: "create-project-key" }));
+    assert.equal(decode(await call("list_projects", { clientId: "new-client", limit: 10 })).items.length, 1);
+    const created = decode(await call("create_content", { clientId: "new-client", channel: "instagram", accountRef: "synthetic-account", title: "Test", caption: "Synthetic draft", assets: [], idempotencyKey: "create-content-key" }));
+    decode(await call("approve_content", { clientId: "new-client", contentId: created.id, expectedRevision: 1, channel: "instagram", accountRef: "synthetic-account", idempotencyKey: "approve-content-key" }));
+    decode(await call("schedule_content", { clientId: "new-client", contentId: created.id, expectedRevision: 2, scheduledAt: "2099-01-01T12:00:00Z", timezone: "UTC", idempotencyKey: "schedule-content-key" }));
+    const saved = decode(await call("get_content", { clientId: "new-client", contentId: created.id }));
+    assert.equal(saved.status, "scheduled"); assert.equal(saved.publishingEnabled, false);
   });
   await t.test("expired and revoked credentials are rejected", async () => {
     await db.prepare("UPDATE principals SET revoked_at=? WHERE tenant_id=?").bind(new Date().toISOString(), "b").run();

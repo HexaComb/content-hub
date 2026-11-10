@@ -43,15 +43,15 @@ Video embeds and metric overlays are exploratory UI ideas, not requirements in t
 
 ### Foundation implemented in this commit
 
-Worker MCP, D1 schema, generic metric definitions, observations/corrections, exact monthly comparisons, service authentication and content retrieval. This is a starter and requires deployment validation before real data.
+Worker MCP, D1 schema, client/project create/update, generic metric definitions, observations/corrections, exact monthly comparisons, service authentication and content lifecycle read/write tools. All application data writes go through MCP; credential provisioning remains an operator security boundary. This is a starter and requires deployment validation before real data.
 
 ### Next: usable private reporting app
 
 Astro UI, human identity provider and tenant membership management; client setup; metric detail/history; read-only monthly report and content calendar; accessible/mobile UI tests. Add page-level pagination where the prototype currently limits discovery.
 
-### Then: content editing and coordination
+### Then: client invitations and publishing coordination
 
-Draft editing, version-bound approval, scheduling, audit events, durable claims, publication receipts and reconciliation. Keep actual publishing outside Content Hub unless separately requested.
+Resend invitations scoped to an Instagram-account or one-off-project target, verified human identity and read-only metric access. Add durable publishing claims and reconciliation before any unattended external consumer is connected. Draft editing, revision/destination-bound approval, scheduling, audits and externally supplied receipts are already in the backend. Keep actual publishing outside Content Hub unless separately requested.
 
 ### Then: reporting and scale
 

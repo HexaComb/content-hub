@@ -1,8 +1,8 @@
 # Deployment and security readiness
 
-## Not deployed
+## Deployment boundaries
 
-This repository contains a local buildable backend. It has not created a Cloudflare database, Worker deployment, identity provider, API token, user login or production agent credential. Deployment is a separate step that needs the intended Cloudflare account/environment and approval for resources and access.
+This repository contains a buildable backend. The configuration targets an empty D1 database created for Content Hub. It contains no identity provider, user login or production agent credential. Deployment and main-branch build setup are separately verified operations; do not infer live readiness from this document alone.
 
 The new Cloudflare CLI uses `cloudflare.config.ts`. It is beta, so versions are lockfile-pinned. `npm run build` only produces a local bundle. There is deliberately no automatic deploy or remote migration in the check script.
 
@@ -20,7 +20,7 @@ The new Cloudflare CLI uses `cloudflare.config.ts`. It is beta, so versions are 
 
 ## Access model
 
-Credentials are scoped to one tenant and a list of clients. Supported scopes are `metrics:read`, `metrics:write`, `content:read`. A publisher does not need to write metrics; a metrics-only collector does not need content access. Tool visibility is based on scope and every operation also checks authorization in the data layer.
+Credentials are scoped to one tenant and a list of clients. Supported scopes are `clients:write`, `projects:read`, `projects:write`, `metrics:read`, `metrics:write`, `content:read`, `content:write`, `content:approve`, `content:schedule` and `content:receipt`. A publisher does not need to write metrics; a metrics-only collector does not need content access. Tool visibility is based on scope and every operation also checks authorization in the data layer.
 
 Bearer tokens must be random, high entropy, individually issued, short lived where practical, revocable and rotated. The application stores hashes, not raw tokens. Do not send one agent another agent's token. No URL query parameter authentication is accepted. Logs do not include tokens, captions, source URLs or metric values.
 
@@ -38,7 +38,8 @@ Sources: [D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/), [
 
 - Human login, onboarding and secure operator/credential management.
 - Fully paginated discovery and an audit/history interface.
-- Content editing, revision-bound approvals and safe publisher claims/receipts.
+- Safe publisher claims and uncertain-action reconciliation. Content editing, revision-bound approvals and evidence-only receipts are implemented.
+- Resend invitation delivery, verified human login and target-scoped private metric access.
 - Production deployment tests, abuse/load tests, backup/restore and operational alarms.
 - Reviewed report snapshots and explicitly authorized sharing/export.
 - Security review of client data and any third-party media/embed handling.

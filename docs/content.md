@@ -10,9 +10,9 @@ Asset references should identify durable objects/URLs, content type and alt text
 
 ## Lifecycle
 
-Planned states: `draft → approved → scheduled → publishing → published`, with `failed` and `cancelled` branches. Scheduling requires approval metadata. Published records require a provider receipt and publication time. The SQL schema models these states; the initial MCP only reads them. Editing, approval and scheduling tools are not implemented yet.
+Planned states: `draft → approved → scheduled → publishing → published`, with `failed` and `cancelled` branches. Scheduling requires approval metadata. Published records require a provider receipt and publication time. The SQL schema models these states. MCP tools create/edit drafts, approve exact revision/destination, schedule/cancel and record externally supplied publication receipts. Publishing/failed states are reserved for future coordination; the current receipt tool refuses uncertain states.
 
-Approval must refer to a specific content revision and destination. Changes to caption, assets, destination or meaningful timing invalidate approval. Explicit timezones are required; store execution instants in UTC and keep the original timezone for display. Resolve ambiguous/nonexistent daylight-saving times when scheduling rather than guessing.
+Approval must refer to a specific content revision and destination. Edits to caption, assets or destination invalidate approval and clear the schedule. A separately authorized scheduling credential may change the time for an already-approved payload. Explicit timezones are required; store execution instants in UTC and keep the original timezone for display. Resolve ambiguous/nonexistent daylight-saving times when scheduling rather than guessing.
 
 ## Coordination before enabling publication
 
@@ -25,7 +25,7 @@ Simply reading a scheduled item must not cause publication or reserve it. Before
 5. Reconciliation after timeout/uncertain results. Do not blindly publish again just because the lease expired. Check the provider result before retrying.
 6. Versioned events recording claims, approvals, cancellations and receipts. Never overwrite an approved post's history.
 
-Content Hub does not currently perform these steps or publish anything. Do not attach an unattended publisher until this coordination and its tests exist. Publisher authorization belongs to the external agent's own account and permission policy; read access to Content Hub is not permission to post.
+Content Hub records audits and accepts explicit evidence of completed external publication, but does not currently implement claims/reconciliation or publish anything. Do not attach an unattended publisher until this coordination and its tests exist. Publisher authorization belongs to the external agent's own account and permission policy; read access to Content Hub is not permission to post.
 
 ## Metrics linked to content
 

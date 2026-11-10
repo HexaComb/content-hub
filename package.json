@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
     "check": "npm run typecheck && npm test && npm run build && npm run test:runtime",
-    "test:runtime": "node --test tests/runtime.integration.ts"
+    "test:runtime": "node --test tests/*.integration.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0",

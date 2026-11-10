@@ -1,0 +1,17 @@
+import { z } from 'zod';
+import { id } from './schemas.ts';
+const timezone = z.string().min(1).max(80).refine(v => { try { new Intl.DateTimeFormat('en', { timeZone: v }); return true; } catch { return false; } }, 'Use a valid IANA timezone.');
+const revision = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER - 1);
+const idempotencyKey = z.string().min(8).max(120);
+const clientFields = { clientId: id, name: z.string().trim().min(1).max(200), timezone, idempotencyKey };
+export const createClientInput = z.object({ ...clientFields, expectedRevision: z.literal(0) }).strict();
+export const updateClientInput = z.object({ ...clientFields, expectedRevision: revision }).strict();
+const projectFields = { kind: z.enum(['instagram_account', 'one_off_project']), platformAccountRef: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_.@-]+$/, 'Use a public account ID or handle, never credentials.').describe('Public Instagram account ID or handle only. Never send an access token, password, OAuth secret, or URL. Immutable after creation.').nullable().optional(), clientId: id, projectId: id, name: z.string().trim().min(1).max(200), description: z.string().max(4000), status: z.enum(['active', 'paused', 'completed', 'archived']), metricIds: z.array(id).max(100).refine(v => new Set(v).size === v.length, 'Metric IDs must be unique.'), idempotencyKey };
+const validIdentity = (input: {kind: string; platformAccountRef?: string | null}) => input.kind !== 'instagram_account' || Boolean(input.platformAccountRef);
+export const createProjectInput = z.object({ ...projectFields, expectedRevision: z.literal(0) }).strict().refine(validIdentity, 'Instagram accounts require a public account reference.');
+export const updateProjectInput = z.object({ ...projectFields, expectedRevision: revision }).strict().refine(validIdentity, 'Instagram accounts require a public account reference.');
+export const listProjectsInput = z.object({ clientId: id, afterId: id.optional(), limit: z.number().int().min(1).max(100).default(50) }).strict();
+export type CreateClientInput = z.infer<typeof createClientInput>;
+export type UpdateClientInput = z.infer<typeof updateClientInput>;
+export type CreateProjectInput = z.infer<typeof createProjectInput>;
+export type UpdateProjectInput = z.infer<typeof updateProjectInput>;

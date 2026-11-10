@@ -9,10 +9,11 @@ An agency workspace for storing client metrics, comparing reporting periods, and
 - Arbitrary metric definitions and numeric observations. Instagram and SEO are categories, not hardcoded tables.
 - Source attribution, collection timestamps, missing/partial data, idempotent ingestion and append-only corrections.
 - Month-over-month comparisons using exact supplied monthly periods.
-- Generic content discovery: drafts, approved and scheduled posts, captions, asset references, publication state and linked metrics.
+- MCP data writes for client/project setup, drafts, approval, scheduling, cancellation, publication receipts and metric associations.
+- Agent-neutral content discovery with captions, asset references, publication state and linked metrics.
 - Scoped service credentials stored only as hashes, with expiry, revocation and explicit client grants.
 
-**This is an early backend foundation, not a finished or deployed product.** No real client data, credentials, Cloudflare resources, OpenSEO integration or publishing integration is included. The reporting UI, content editing/approval and publisher coordination are next implementation steps.
+**This is an early backend foundation, not a finished product.** No real client data, credentials, OpenSEO integration or publishing integration is included. The reporting UI, client invitations and safe publisher coordination are next implementation steps. An empty D1 deployment target is explicitly configured; see deployment notes for setup boundaries.
 
 ## Stack choice
 
@@ -38,6 +39,14 @@ The database starts empty. `/health` is public. `/mcp` rejects unauthenticated r
 
 | Tool | Purpose | Scope |
 | --- | --- | --- |
+| `create_client` / `update_client` | Create or revise a client with an audit receipt | `clients:write` |
+| `create_project` / `update_project` | Create or revise an Instagram-account/one-off-project target | `projects:write` |
+| `list_projects` | Read project targets and metric associations | `projects:read` |
+| `create_content` / `update_content` | Draft/edit content, invalidating previous approval | `content:write` |
+| `link_content_metric` | Associate content with a metric | `content:write` |
+| `approve_content` | Record explicit approval of a revision and destination | `content:approve` |
+| `schedule_content` / `cancel_content` | Set or cancel a stored schedule | `content:schedule` |
+| `record_publication_receipt` | Record evidence of an already completed external post | `content:receipt` |
 | `list_clients` | Discover clients explicitly granted to the credential | Authenticated |
 | `list_metrics` | Read definitions and units | `metrics:read` |
 | `define_metric` | Add a named numeric metric with stable meaning | `metrics:write` |
@@ -54,6 +63,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 - [Architecture and product plan](docs/architecture.md)
 - [Metric semantics and reporting](docs/metrics.md)
 - [Content lifecycle and safe agent coordination](docs/content.md)
+- [Resend invitation design](docs/invitations.md)
 - [Deployment, access control and readiness](docs/deployment.md)
 - [Synthetic MCP examples](examples/metric-workflow.json)
 
@@ -61,7 +71,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 
 - The prototype compares exact full-month observations, not an inferred roll-up of daily values.
 - Metric definitions are immutable. New meanings or units require new keys.
-- Content tools are read-only. They do not publish, approve, schedule, reserve, or claim a post.
+- Content tools store drafts, approval, schedules and receipts. They never publish, reserve or claim a post on an external platform.
 - Service bearer authentication is for controlled agent clients. Browser login and standards-based OAuth discovery/authorization are not implemented.
 - Client/metric discovery has explicit prototype limits (100 clients / 200 metrics). Content listing is paginated.
 - No public report sharing, external data fetching, media downloading, deletion tool or SQL execution tool is exposed.
