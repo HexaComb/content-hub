@@ -1,0 +1,29 @@
+{
+  "note": "Synthetic examples only. Replace identifiers after reading your authorized client's metric definitions. No credentials or real client data are included.",
+  "define_metric": {
+    "clientId": "demo-client",
+    "key": "search.organic_clicks",
+    "label": "Organic search clicks",
+    "category": "seo",
+    "unit": "count",
+    "direction": "higher",
+    "semantics": "period_total",
+    "timezone": "America/Los_Angeles",
+    "dimensions": { "property": "example.com", "search_type": "web" },
+    "definition": "Source-provided full-calendar-month organic search clicks for the specified property and search type."
+  },
+  "record_observation": {
+    "clientId": "demo-client",
+    "metricId": "REPLACE_WITH_DEFINED_METRIC_ID",
+    "periodStart": "2026-10-01",
+    "periodEnd": "2026-11-01",
+    "value": 840,
+    "quality": "complete",
+    "source": { "provider": "OpenSEO", "note": "Illustrative number obtained separately by an agent. Content Hub does not query this provider." },
+    "collectedAt": "2026-11-03T17:00:00Z",
+    "idempotencyKey": "demo-search-clicks-2026-10-v1",
+    "expectedRevision": 0
+  },
+  "compare_month": { "clientId": "demo-client", "month": "2026-10" },
+  "list_content": { "clientId": "demo-client", "status": "scheduled", "limit": 25 }
+}

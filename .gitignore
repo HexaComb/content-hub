@@ -1,0 +1,13 @@
+node_modules/
+.cf/
+.cloudflare/
+.wrangler/
+dist/
+.dev.vars*
+.env*
+!.env.example
+*.sqlite*
+*.db
+__pycache__/
+.DS_Store
+
