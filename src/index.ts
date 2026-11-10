@@ -10,15 +10,20 @@ import { contentRepository } from "./content.ts";
 import { createContentInput, updateContentInput, approveContentInput, scheduleContentInput, cancelContentInput, recordPublicationReceiptInput, linkContentMetricInput } from "./contentSchemas.ts";
 import { createClient, updateClient, createProject, updateProject, listProjects } from "./workspaces.ts";
 import { createClientInput, updateClientInput, createProjectInput, updateProjectInput, listProjectsInput } from "./workspaceSchemas.ts";
+import { invitations, handleInvitationRequest } from "./invitations.ts";
+import { prepareInvitationInput, sendInvitationInput, listInvitationsInput, revokeInvitationInput } from "./invitationSchemas.ts";
+import { getSession, portalTargets, portalReport } from "./portal.ts";
+import type { InvitationEnv } from "./mail.ts";
 
-export type Env = InferEnv<UnwrapConfig<typeof config.worker>>;
+export type Env = InferEnv<UnwrapConfig<typeof config.worker>> & InvitationEnv;
 const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const write = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 
-function createServer(db: D1Database, principal: Principal) {
+function createServer(db: D1Database, principal: Principal, env: Env) {
   const server = new McpServer({ name: "content-hub", version: "0.1.0" });
   const repo = repository(db, principal);
   const content = contentRepository(db, principal);
+  const invite = invitations(db, principal, env);
   const respond = async (operation: () => Promise<unknown>) => {
     try { return { content: [{ type: "text" as const, text: JSON.stringify(await operation()) }] }; }
     catch (error) {
@@ -27,6 +32,12 @@ function createServer(db: D1Database, principal: Principal) {
     }
   };
   server.registerTool("list_clients", { description: "List clients explicitly granted to this credential (prototype limit: 100).", annotations: readOnly }, () => respond(() => repo.listClients()));
+  if (principal.scopes.includes("invitations:manage")) {
+    server.registerTool("prepare_invitation", { description: "Prepare a read-only invitation for one recipient and exact Instagram-account or project metric set. Returns a preview for explicit approval; does not email or grant access.", inputSchema: prepareInvitationInput, annotations: write }, v => respond(() => invite.prepareInvitation(v)));
+    server.registerTool("list_invitations", { description: "Read invitation status for an authorized client. Never returns raw invitation/session tokens.", inputSchema: listInvitationsInput, annotations: readOnly }, v => respond(() => invite.listInvitations(v)));
+    server.registerTool("revoke_invitation", { description: "Revoke a pending invitation or its accepted read-only access. Requires explicit authorization to remove access.", inputSchema: revokeInvitationInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => invite.revokeInvitation(v)));
+  }
+  if (principal.scopes.includes("invitations:send")) server.registerTool("send_invitation", { description: "Send the exact approved invitation via Resend. Invoke only after explicit user approval of recipient, target, metric set, access duration and email transmission to Resend. This starts a scoped access flow after recipient verification. No blind retry after uncertain delivery.", inputSchema: sendInvitationInput, annotations: { ...write, openWorldHint: true } }, v => respond(() => invite.sendInvitation(v)));
   if (principal.scopes.includes("clients:write")) {
     server.registerTool("create_client", { description: "Create a client in this agency and grant this credential access to that new client. Does not invite anyone or grant access to existing clients.", inputSchema: createClientInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => createClient(db, principal, v)));
     server.registerTool("update_client", { description: "Update an authorized client's name/timezone with a revision check and audit receipt.", inputSchema: updateClientInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => updateClient(db, principal, v)));
@@ -67,7 +78,31 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health" && request.method === "GET") return Response.json({ status: "ok", service: "content-hub", stage: "prototype" });
-    if (url.pathname !== "/mcp") return new Response("Not found", { status: 404 });
+    if (url.pathname.startsWith("/api/")) {
+      try {
+        if (["/api/invitations/begin", "/api/invitations/accept", "/api/login/begin", "/api/login/verify", "/api/logout"].includes(url.pathname))
+          return secureResponse(await handleInvitationRequest(request, env, undefined, task => ctx.waitUntil(task)), true);
+        if (request.method !== "GET") return secureResponse(Response.json({ error: "Method not allowed." }, { status: 405 }), true);
+        const session = await getSession(env.DB, request);
+        if (url.pathname === "/api/session") return secureResponse(Response.json(session ? { authenticated: true, email: session.email } : { authenticated: false }), true);
+        if (!session) return secureResponse(Response.json({ error: "Sign in to continue." }, { status: 401 }), true);
+        if (url.pathname === "/api/targets") return secureResponse(Response.json(await portalTargets(env.DB, session)), true);
+        const match = url.pathname.match(/^\/api\/targets\/([^/]+)\/([^/]+)\/report$/);
+        if (match) {
+          const clientId = id.parse(decodeURIComponent(match[1]));
+          const projectId = id.parse(decodeURIComponent(match[2]));
+          return secureResponse(Response.json(await portalReport(env.DB, session, clientId, projectId, url.searchParams.get("month") ?? new Date().toISOString().slice(0, 7))), true);
+        }
+        return secureResponse(Response.json({ error: "Not found." }, { status: 404 }), true);
+      } catch (error) {
+        return secureResponse(Response.json({ error: error instanceof PublicError ? error.message : "Unable to complete this request." }, { status: error instanceof PublicError ? 403 : 400 }), true);
+      }
+    }
+    if (url.pathname !== "/mcp") {
+      if (!["GET", "HEAD"].includes(request.method)) return new Response("Method not allowed", { status: 405 });
+      if (!env.ASSETS) return new Response("Portal is not configured", { status: 503 });
+      return secureResponse(await env.ASSETS.fetch(request), !url.pathname.startsWith("/_astro/"));
+    }
     // Service-to-service prototype: do not open cross-origin browser access.
     if (request.headers.has("Origin") && request.headers.get("Origin") !== url.origin) return new Response("Forbidden origin", { status: 403 });
     if (!["GET", "POST", "DELETE"].includes(request.method)) return new Response("Method not allowed", { status: 405 });
@@ -92,7 +127,7 @@ export default {
         for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.length; }
         request = new Request(request, { body });
       }
-      const response = await createMcpHandler(() => createServer(env.DB, principal))(request, env, ctx);
+      const response = await createMcpHandler(() => createServer(env.DB, principal, env))(request, env, ctx);
       const headers = new Headers(response.headers); headers.set("Cache-Control", "no-store");
       return new Response(response.body, { status: response.status, headers });
     } catch {
@@ -101,3 +136,14 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+function secureResponse(response: Response, privateResponse = false): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'sha256-2Y5iDfkTLtN47Xi7k3V88gxx3er2ah3Jo/4vkmnHjq8='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  if (privateResponse) headers.set("Cache-Control", "no-store");
+  return new Response(response.body, { status: response.status, headers });
+}

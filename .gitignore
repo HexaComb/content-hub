@@ -3,6 +3,9 @@ node_modules/
 .cloudflare/
 .wrangler/
 dist/
+.astro/
+web/dist/
+web/.astro/
 .dev.vars*
 .env*
 !.env.example

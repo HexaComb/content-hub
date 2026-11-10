@@ -6,8 +6,8 @@ Give a marketing agency one dependable place to answer: “What changed for this
 
 ## Small initial stack
 
-1. **Astro reporting application (next step):** client selector, monthly overview, metric detail/history and content calendar. Add React islands only for controls that need rich interactivity.
-2. **Cloudflare Worker:** application endpoints and stateless MCP. The initial commit implements the MCP backend, not the Astro app.
+1. **Astro reporting application:** private target selector, monthly overview, two-period comparisons and synthetic demo. Metric history and content calendar remain future UI work.
+2. **Cloudflare Worker:** application endpoints and stateless MCP. Serves the MCP, private reporting/auth APIs and static Astro assets.
 3. **D1:** tenants, clients, agent permissions, metric definitions, observation revisions and content metadata.
 4. **R2, only when needed:** uploaded media and frozen report exports. The initial design stores asset references and does not provision storage or download files.
 
@@ -45,13 +45,13 @@ Video embeds and metric overlays are exploratory UI ideas, not requirements in t
 
 Worker MCP, D1 schema, client/project create/update, generic metric definitions, observations/corrections, exact monthly comparisons, service authentication and content lifecycle read/write tools. All application data writes go through MCP; credential provisioning remains an operator security boundary. This is a starter and requires deployment validation before real data.
 
-### Next: usable private reporting app
+### Private reporting app implemented
 
-Astro UI, human identity provider and tenant membership management; client setup; metric detail/history; read-only monthly report and content calendar; accessible/mobile UI tests. Add page-level pagination where the prototype currently limits discovery.
+Astro UI, passwordless email verification and separate human sessions, read-only target-scoped monthly reports, and safe invitation acceptance. Live Resend configuration remains disabled. Metric detail/history, content calendar, operator UI and fully paginated discovery remain future work.
 
-### Then: client invitations and publishing coordination
+### Invitations implemented; publishing coordination remains
 
-Resend invitations scoped to an Instagram-account or one-off-project target, verified human identity and read-only metric access. Add durable publishing claims and reconciliation before any unattended external consumer is connected. Draft editing, revision/destination-bound approval, scheduling, audits and externally supplied receipts are already in the backend. Keep actual publishing outside Content Hub unless separately requested.
+Resend invitations are scoped to one Instagram-account or one-off-project target and frozen metric set, with verified recipient identity and read-only access. Actual sending requires configuration and explicit recipient authorization. Add durable publishing claims and reconciliation before any unattended external consumer is connected. Draft editing, revision/destination-bound approval, scheduling, audits and externally supplied receipts are already in the backend. Keep actual publishing outside Content Hub unless separately requested.
 
 ### Then: reporting and scale
 

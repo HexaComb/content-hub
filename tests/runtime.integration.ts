@@ -23,7 +23,7 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
   for (const [tenant, token] of [["a", tokenA], ["b", tokenB]]) {
     await db.prepare("INSERT INTO tenants VALUES (?,?)").bind(tenant, "Synthetic agency").run();
     await db.prepare("INSERT INTO clients VALUES (?,?,?,?)").bind(tenant, "client", "Synthetic client", "UTC").run();
-    await db.prepare("INSERT INTO principals VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt"]').run();
+    await db.prepare("INSERT INTO principals VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt","invitations:manage","invitations:send"]').run();
     await db.prepare("INSERT INTO client_grants VALUES (?,?,?)").bind(tenant, "agent", "client").run();
   }
   const call = async (name: string, args: Record<string, unknown>, token = tokenA) => {
@@ -98,6 +98,30 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
     decode(await call("schedule_content", { clientId: "new-client", contentId: created.id, expectedRevision: 2, scheduledAt: "2099-01-01T12:00:00Z", timezone: "UTC", idempotencyKey: "schedule-content-key" }));
     const saved = decode(await call("get_content", { clientId: "new-client", contentId: created.id }));
     assert.equal(saved.status, "scheduled"); assert.equal(saved.publishingEnabled, false);
+  });
+  await t.test("private portal API fails closed with secure response headers", async () => {
+    const session = await mf.dispatchFetch("https://example.test/api/session");
+    assert.deepEqual(await session.json(), { authenticated: false });
+    assert.equal(session.headers.get("Cache-Control"), "no-store");
+    assert.equal(session.headers.get("Referrer-Policy"), "no-referrer");
+    assert.ok(session.headers.get("Content-Security-Policy")?.includes("frame-ancestors 'none'"));
+    assert.equal((await mf.dispatchFetch("https://example.test/api/targets")).status, 401);
+    assert.equal((await mf.dispatchFetch("https://example.test/api/targets/client/guessed/report?month=2026-10")).status, 401);
+    const login = await mf.dispatchFetch("https://example.test/api/login/begin", { method: "POST", headers: { Origin: "https://example.test", "Content-Type": "application/json" }, body: JSON.stringify({email:"synthetic@example.invalid"}) });
+    assert.equal(login.status, 503);
+    assert.equal((await login.json() as {error:string}).error, "Authentication unavailable.");
+  });
+  await t.test("invitation MCP preparation is scoped and cannot deliver without configuration", async () => {
+    decode(await call("create_project", { clientId: "client", projectId: "report-target", kind: "one_off_project", name: "Synthetic target", description: "Test only", status: "active", metricIds: [metric.id], expectedRevision: 0, idempotencyKey: "report-target-create" }));
+    const prepared = decode(await call("prepare_invitation", {clientId:"client",projectId:"report-target",recipient:"synthetic@example.invalid",metricIds:[metric.id],grantExpiresAt:new Date(Date.now()+86400000).toISOString()}));
+    assert.equal(prepared.preview.role,"metrics_viewer");
+    assert.deepEqual(prepared.preview.metricIds,[metric.id]);
+    assert.equal((await call("send_invitation",{invitationId:prepared.invitationId,approvalDigest:prepared.approvalDigest,explicitlyApproved:true})).isError,true);
+    const list=decode(await call("list_invitations",{clientId:"client"}));
+    assert.equal(list.invitations[0].delivery_state,"prepared");
+    assert.equal((await call("revoke_invitation",{clientId:"client",invitationId:prepared.invitationId},tokenB)).isError,undefined);
+    assert.equal(decode(await call("revoke_invitation",{clientId:"client",invitationId:prepared.invitationId},tokenB)).revoked,false);
+    assert.equal(decode(await call("revoke_invitation",{clientId:"client",invitationId:prepared.invitationId})).revoked,true);
   });
   await t.test("expired and revoked credentials are rejected", async () => {
     await db.prepare("UPDATE principals SET revoked_at=? WHERE tenant_id=?").bind(new Date().toISOString(), "b").run();
