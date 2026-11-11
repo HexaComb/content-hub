@@ -38,3 +38,7 @@ PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs CHROMIUM_PATH=/usr/bin/chromium 
 ```
 
 The browser suite covers empty portal layouts, unavailable authentication, fragment clearing, retry, and interrupted invitation reload. It does not validate a live Clerk application. Browser execution was previously blocked by the environment's socket restrictions and has not been retried for this migration. Real sign-in, provider redirects, CSP compatibility, signed-out/repeated flows and authenticated invitation acceptance require an authorized configured Clerk test environment before production deployment.
+
+## Client/server session disagreement
+
+A Clerk browser session is not proof of workspace access. If `/api/session` does not verify it, the portal shows a bounded setup/session error with manual retry and sign-out instead of mounting SignIn again. SignIn also checks for an existing session immediately before mounting. Repeated listener updates for the same session do not restart boot, and superseded/session-changed responses are discarded. The invitation page keeps the same fail-closed behavior. Tests cover mismatch, signed-out, verified empty-workspace, listener repetition and session-end races. Live end-to-end authentication still requires browser verification.

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { __experimental_JWTPayloadToAuthObjectProperties as parseClerkClaims } from '@clerk/shared/jwtPayloadParser';
 import { clerkAuthConfigured, getHumanIdentity, type HumanAuthAdapter } from '../src/humanAuth.ts';
 import { getAdminSession } from '../src/admin.ts';
 import type { InvitationEnv } from '../src/mail.ts';
@@ -51,4 +52,34 @@ test('Clerk configuration and provider errors fail closed without exposing secre
  }
  assert.equal(calls,0);
  for(const failure of [mock,adapter({async getSession(){throw Error('synthetic-provider-secret');}}),adapter({async getUser(){throw Error('synthetic-provider-secret');}})])await assert.rejects(getHumanIdentity(request,env,failure),error=>error instanceof Error && error.message==='Authentication unavailable.');
+});
+
+
+test('Clerk SDK optional sts conversion accepts only an independently active live session',async()=>{
+ // Plain synthetic claim data, not a signed JWT or credential. Exercise the
+ // installed official SDK parser, while authentication remains an explicit mock.
+ const seconds=Math.floor(Date.now()/1000);
+ const payload={v:2 as const,__raw:'',iss:env.CLERK_ISSUER!,sub:'user_verified',sid:'sess_verified',azp:env.APP_ORIGIN,nbf:seconds-1,iat:seconds-1,exp:seconds+60};
+ const parsed=parseClerkClaims(payload);
+ assert.equal(parsed.sessionStatus,null);
+ for(const auth of [parsed,{...parsed,sessionStatus:undefined},parseClerkClaims({...payload,sts:'active'})]){
+  const reads:string[]=[];
+  const mock=adapter({async authenticate(){return {isAuthenticated:true,status:'signed-in',toAuth:()=>auth};},async getSession(){reads.push('live session');return session();},async getUser(){reads.push('verified primary email');return user();}});
+  const identity=await getHumanIdentity(request,env,mock);
+  assert.ok(identity);assert.deepEqual(reads,['live session','verified primary email']);
+  assert.equal(getAdminSession(identity,env)?.role,'super_admin');
+  for(const live of [{...session(),status:'revoked'},{...session(),status:'pending'},{...session(),status:'expired'},{...session(),expireAt:0},{...session(),userId:'other_user'}]){
+   let userRead=false;
+   await denied({...mock,async getSession(){return live;},async getUser(){userRead=true;return user();}});
+   assert.equal(userRead,false);
+  }
+  await denied({...mock,async authenticate(){return {isAuthenticated:false,status:'signed-out',toAuth:()=>auth};}});
+  await denied({...mock,async getUser(){return {...user(),primaryEmailAddress:{emailAddress:'christian@unreelviews.com',verification:{status:'unverified'}}};}});
+ }
+ const pending=parseClerkClaims({...payload,sts:'pending'});
+ for(const status of [pending.sessionStatus,'revoked','expired','', 'unknown']){
+  let reads=0;
+  await denied(adapter({async authenticate(){return {isAuthenticated:true,status:'signed-in',toAuth:()=>({...parsed,sessionStatus:status})};},async getSession(){reads++;return session();}}));
+  assert.equal(reads,0);
+ }
 });

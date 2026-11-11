@@ -15,8 +15,9 @@ export async function getClerk():Promise<Clerk>{
  })().catch(()=>{pending=undefined;throw new AuthUnavailable();});
  return pending;
 }
-export async function mountSignIn(node:HTMLDivElement,returnPath:'/'|'/invite'){
+export async function mountSignIn(node:HTMLDivElement,returnPath:'/'|'/invite',isCurrent:()=>boolean=()=>true){
  const clerk=await getClerk();
+ if(!isCurrent()||clerk.session)return undefined;
  clerk.mountSignIn(node,{routing:'hash',forceRedirectUrl:location.origin+returnPath,signUpForceRedirectUrl:location.origin+returnPath,withSignUp:false,transferable:false,appearance:{elements:{footerAction:{display:'none'}}}});
  return ()=>clerk.unmountSignIn(node);
 }

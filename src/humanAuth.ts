@@ -40,7 +40,10 @@ export async function getHumanIdentity(request: Request, env: InvitationEnv, ada
   const state = await verifier.authenticate(request,{acceptsToken:'session_token', authorizedParties:[appOrigin(env)], issuer:env.CLERK_ISSUER!});
   if(!state.isAuthenticated || state.status !== 'signed-in')return null;
   const auth=state.toAuth();
-  if(!auth || !auth.userId || !auth.sessionId || auth.sessionStatus!=='active' || auth.sessionClaims?.iss!==env.CLERK_ISSUER || auth.actor || auth.sessionClaims?.act)return null;
+  // Clerk's optional JWT `sts` claim becomes null when omitted. Its absence is
+  // not a pending session: require the live session below to be active instead.
+  // Explicit pending/non-active token statuses remain denied before any reads.
+  if(!auth || !auth.userId || !auth.sessionId || (auth.sessionStatus!=null && auth.sessionStatus!=='active') || auth.sessionClaims?.iss!==env.CLERK_ISSUER || auth.actor || auth.sessionClaims?.act)return null;
   // Fetch current server-side state on every request, not just JWT expiry. A
   // valid signature must not keep a revoked session or unverified email alive.
   const session=await verifier.getSession(auth.sessionId);
