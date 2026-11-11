@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {currentReportingPeriod,buildMonthlyMetricsPrompt,metricsMcpEndpoint} from '../src/scripts/plugin-prompt.ts';
+import {currentReportingPeriod,buildMonthlyMetricsPrompt,metricsMcpEndpoint,musePublicOAuthClientId} from '../src/scripts/plugin-prompt.ts';
 import type {Metric,Target} from '../src/scripts/types.ts';
 
 test('current month uses client timezone across date/year boundaries and never guesses',()=>{
@@ -42,4 +42,24 @@ test('missing timezone and empty mappings explicitly stop rather than assume acc
  assert.ok(prompt.includes('An empty selection means stop'));
  assert.ok(!prompt.includes('tenantId'));
  assert.ok(!/periodStart=\d{4}-/.test(prompt));
+});
+
+test('SEO and Instagram prompts include public Muse setup, individual consent and minimum target-scoped access',()=>{
+ assert.equal(metricsMcpEndpoint,'https://content.unreelviews.com/mcp');
+ assert.equal(musePublicOAuthClientId,'ZuAE_6drixVcWV1S');
+ const target:Target={tenantId:'tenant-a',clientId:'client-a',projectId:'project-a',name:'Project',kind:'one_off_project',status:'active',timezone:'UTC'};
+ for(const key of ['seo','instagram'] as const){
+  const prompt=buildMonthlyMetricsPrompt(target,key,{key,enabled:true,revision:1,metricIds:[]},[],new Date('2026-11-11T12:00:00Z'));
+  assert.ok(prompt.includes('public OAuth client ID ZuAE_6drixVcWV1S'));
+  assert.ok(prompt.includes('no client secret is required or should be supplied'));
+  assert.ok(prompt.includes('not a credential and does not grant access'));
+  assert.ok(prompt.includes('Each person must sign in with their own already authorized operator account and consent to their own access'));
+  assert.ok(prompt.includes('user-approved target client/project'));
+  assert.ok(prompt.includes('minimum scopes needed for this metrics update: mcp:connect, clients:read, projects:read, metrics:read, and metrics:write'));
+  assert.ok(prompt.includes('Do not grant other clients, invitations, publishing, administrator access, or additional persistent access'));
+  assert.ok(prompt.includes('Before sharing data with Muse, review its current data/privacy notice'));
+  assert.ok(prompt.includes('Meta warns that Muse connector interactions may be used to improve its AI'));
+  assert.ok(prompt.includes('These setup instructions do not verify a Muse connection'));
+  assert.ok(prompt.includes('"clientId":"client-a","projectId":"project-a"'));
+ }
 });
