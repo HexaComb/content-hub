@@ -1,5 +1,5 @@
 import { sha256 } from "./domain.ts";
-export type Principal = { tenantId: string; id: string; scopes: string[]; oauthEligibleScopes?: string[]; oauthOperatorId?: string };
+export type Principal = { tenantId: string; id: string; scopes: string[]; oauthEligibleScopes?: string[]; oauthOperatorId?: string; oauthConnectionMode?: 'bounded'|'ongoing'; oauthExpiresAt?: string };
 export class PublicError extends Error {}
 
 export async function authenticate(request: Request, db: D1Database): Promise<Principal | null> {

@@ -8,7 +8,8 @@ import { OAUTH_SCOPES, OAUTH_SCOPE_LABELS, getOperator, operatorClients, resolve
 
 export const OAUTH_ISSUER='https://content.unreelviews.com';
 export const OAUTH_RESOURCE=OAUTH_ISSUER+'/mcp';
-const ACCESS_TTL=900, GRANT_TTL=7*24*60*60;
+import {ACCESS_TTL,FIXED_REFRESH_TTL,ONGOING_IDLE_TTL,proposedConnectionMode,connectionDeadline,type ConnectionMode} from './oauthLifetime.ts';
+import {extendOngoingConnection,handleConnectionManagement,isConnectionManagementPath} from './oauthConnections.ts';
 export type OAuthEnv=InvitationEnv & {DB:D1Database;OAUTH_KV?:KVNamespace;MCP_OAUTH_ENABLED?:string;REQUEST_LIMITER?:{limit(options:{key:string}):Promise<{success:boolean}>}};
 function enabled(env:OAuthEnv):boolean {
  return env.MCP_OAUTH_ENABLED==='true' && !!env.OAUTH_KV && !!env.DB && adminAccessEnabled(env) && appOrigin(env)===OAUTH_ISSUER;
@@ -28,12 +29,21 @@ export const authorizationServer=new OAuthAuthorizationServer<OAuthEnv>({
   if(!enabled(options.env))throw new OAuthError('invalid_grant', {description:'The approved connection is no longer valid.'});
   const principal=await resolveOAuthPrincipal(options.env.DB,options.props,options.clientId,options.userId,options.requestedScope);
   if(!principal || !principal.scopes.includes('mcp:connect') || options.requestedScope.some(s=>!principal.scopes.includes(s)))throw new OAuthError('invalid_grant', {description:'The approved connection is no longer valid.'});
-  await options.env.DB.prepare('UPDATE oauth_delegations SET oauth_grant_id=? WHERE id=? AND (oauth_grant_id IS NULL OR oauth_grant_id=?)').bind(options.grantId,(options.props as OAuthProps).delegationId,options.grantId).run();
-  return {refreshTokenTTL:principal.scopes.includes('offline_access')?GRANT_TTL:0};
+  const delegationId=(options.props as OAuthProps).delegationId;
+  const linked=await options.env.DB.prepare('UPDATE oauth_delegations SET oauth_grant_id=? WHERE id=? AND revoked_at IS NULL AND (oauth_grant_id IS NULL OR oauth_grant_id=?)').bind(options.grantId,delegationId,options.grantId).run();
+  if(linked.meta.changes!==1)throw new OAuthError('invalid_grant',{description:'The approved connection is no longer valid.'});
+  let expiresAt=principal.oauthExpiresAt!;
+  const ongoing=principal.oauthConnectionMode==='ongoing';
+  if(ongoing&&options.grantType==='refresh_token'){
+   try{expiresAt=await extendOngoingConnection(options.env.DB,delegationId,options.userId);}catch(error){if(error instanceof PublicError)throw new OAuthError('invalid_grant',{description:'The approved connection is no longer valid.'});throw new OAuthError('temporarily_unavailable',{description:'Could not refresh access right now. Retry shortly.',statusCode:503});}
+  }
+  const remaining=Math.floor((Date.parse(expiresAt)-Date.now())/1000);
+  if(remaining<60)throw new OAuthError('invalid_grant',{description:'The approved connection has expired. Reconnect to continue.'});
+  return {accessTokenTTL:Math.min(ACCESS_TTL,remaining),refreshTokenTTL:principal.scopes.includes('offline_access')?Math.min(ongoing?ONGOING_IDLE_TTL:FIXED_REFRESH_TTL,remaining):0,...(ongoing&&options.grantType==='refresh_token'?{refreshTokenIdleTTL:Math.min(ONGOING_IDLE_TTL,remaining)}:{})};
  },
 });
 export function isOAuthPath(path:string):boolean {
- return path==='/authorize' || path==='/authorize/' || path==='/oauth/token' || path.startsWith('/.well-known/oauth-');
+ return isConnectionManagementPath(path) || path==='/authorize' || path==='/authorize/' || path==='/oauth/token' || path.startsWith('/.well-known/oauth-');
 }
 /** null means the existing Astro asset handler should serve the consent shell. */
 export async function handleOAuthRoute(request:Request,env:OAuthEnv,ctx:ExecutionContext, authenticateHuman:typeof getHumanIdentity=getHumanIdentity):Promise<Response|null> {
@@ -46,6 +56,7 @@ export async function handleOAuthRoute(request:Request,env:OAuthEnv,ctx:Executio
  if(!enabled(env))return json({error:'MCP authorization is not enabled or configured.'},503);
  try {
   if(env.REQUEST_LIMITER && !(await env.REQUEST_LIMITER.limit({key:`oauth:${request.headers.get('CF-Connecting-IP')??'unknown'}`})).success)return json({error:'Too many authorization requests. Try again shortly.'},429);
+  if(isConnectionManagementPath(url.pathname))return await handleConnectionManagement(request,env,authenticateHuman,(grantId,operatorId)=>authorizationServer.getOAuthApi(env).revokeGrant(grantId,operatorId));
   if(url.pathname!=='/authorize') {
    if(url.pathname==='/oauth/token' && request.method==='POST') {
     // Bound actual bytes before the provider calls formData(); Content-Length is
@@ -78,14 +89,18 @@ export async function handleOAuthRoute(request:Request,env:OAuthEnv,ctx:Executio
    const details=await oauth.describeConsent(parsed);
    const consent=await oauth.beginConsent(parsed);
    const consentExpiresAt=new Date(Date.now()+600000).toISOString();
-   await env.DB.prepare(`INSERT INTO oauth_pending_consents(handle_hash,operator_id,identity_issuer,identity_subject,oauth_client_id,requested_scopes_json,expires_at) VALUES(?,?,?,?,?,?,?)`).bind(await sha256(consent.handle),operator.id,identity.issuer,identity.subject,parsed.clientId,JSON.stringify(parsed.scope),consentExpiresAt).run();
+   const connectionMode=proposedConnectionMode(operator,parsed.scope);
+   const proposedExpiresAt=connectionDeadline(operator,connectionMode,parsed.scope);
+   await env.DB.prepare(`INSERT INTO oauth_pending_consents(handle_hash,operator_id,identity_issuer,identity_subject,oauth_client_id,requested_scopes_json,expires_at,connection_mode,proposed_expires_at) VALUES(?,?,?,?,?,?,?,?,?)`).bind(await sha256(consent.handle),operator.id,identity.issuer,identity.subject,parsed.clientId,JSON.stringify(parsed.scope),consentExpiresAt,connectionMode,proposedExpiresAt).run();
    const offline=parsed.scope.includes('offline_access');
-   return json({handle:consent.handle,client:{name:details.clientName,domain:details.clientDomain??null,redirectHost:new URL(details.redirectUri).host,isLoopback:details.redirectIsLoopback},tenant:{id:operator.tenant_id,name:operator.name},scopes:parsed.scope.map(id=>({id,label:OAUTH_SCOPE_LABELS[id as keyof typeof OAUTH_SCOPE_LABELS],selected:id==='mcp:connect'||id.endsWith(':read')})),clients:clients.map(c=>({...c,selected:false})),expiresAt:new Date(Math.min(Date.parse(operator.expires_at),Date.now()+(offline?GRANT_TTL:ACCESS_TTL)*1000)).toISOString(),consentExpiresAt,accessTokenExpiresInSeconds:ACCESS_TTL,refreshEnabled:offline},200,consent.headers);
+   return json({handle:consent.handle,client:{name:details.clientName,domain:details.clientDomain??null,redirectHost:new URL(details.redirectUri).host,isLoopback:details.redirectIsLoopback},tenant:{id:operator.tenant_id,name:operator.name},scopes:parsed.scope.map(id=>({id,label:id==='offline_access'&&connectionMode==='ongoing'?'Keep connected until I revoke access':OAUTH_SCOPE_LABELS[id as keyof typeof OAUTH_SCOPE_LABELS],selected:id==='mcp:connect'||id.endsWith(':read')})),clients:clients.map(c=>({...c,selected:false})),expiresAt:proposedExpiresAt,consentExpiresAt,accessTokenExpiresInSeconds:ACCESS_TTL,refreshEnabled:offline,connectionMode,...(connectionMode==='ongoing'?{idleTimeoutSeconds:ONGOING_IDLE_TTL}:{})},200,consent.headers);
   }
   const input=await readInput(request);
   const hash=await sha256(input.handle);
-  const pending=await env.DB.prepare('SELECT * FROM oauth_pending_consents WHERE handle_hash=? AND consumed_at IS NULL').bind(hash).first<{operator_id:string;identity_issuer:string;identity_subject:string;oauth_client_id:string;requested_scopes_json:string;expires_at:string}>();
+  const pending=await env.DB.prepare('SELECT * FROM oauth_pending_consents WHERE handle_hash=? AND consumed_at IS NULL').bind(hash).first<{operator_id:string;identity_issuer:string;identity_subject:string;oauth_client_id:string;requested_scopes_json:string;expires_at:string;connection_mode:ConnectionMode;proposed_expires_at:string|null}>();
   if(!pending || pending.operator_id!==operator.id || pending.identity_issuer!==identity.issuer || pending.identity_subject!==identity.subject || !(Date.parse(pending.expires_at)>Date.now()))throw new PublicError('This consent expired, was already used, or belongs to another account. Restart authorization.');
+  if(input.decision==='approve'&&(!pending.proposed_expires_at||!Number.isFinite(Date.parse(pending.proposed_expires_at))))throw new PublicError('Restart authorization to review the current connection duration.');
+  if(input.decision==='approve'&&input.connectionMode!==pending.connection_mode)throw new PublicError('Connection duration changed. Restart authorization and review it again.');
   if(input.decision==='approve')validateSelection(scopeArray(pending.requested_scopes_json),ceiling,input.scopes,clients.map(c=>c.id),input.clientIds);
   // D1 atomic compare-and-set closes concurrent replay even across KV regions.
   const consumed=await env.DB.prepare('UPDATE oauth_pending_consents SET consumed_at=? WHERE handle_hash=? AND consumed_at IS NULL AND expires_at>?').bind(new Date().toISOString(),hash,new Date().toISOString()).run();
@@ -97,21 +112,25 @@ export async function handleOAuthRoute(request:Request,env:OAuthEnv,ctx:Executio
   const approved=await oauth.approveConsent(request,input.handle,{scope:input.scopes});
   if(approved.request.clientId!==pending.oauth_client_id || approved.request.resource!==OAUTH_RESOURCE)throw new PublicError('The connection changed. Restart authorization.');
   // Re-read live identity/policy after the potentially asynchronous client lookup.
-  await assertIdentityStillAuthorized(request,env,identity,operator.id,input.scopes,input.clientIds,authenticateHuman);
+  const currentOperator=await assertIdentityStillAuthorized(request,env,identity,operator.id,input.scopes,input.clientIds,authenticateHuman);
+  if(pending.connection_mode==='ongoing'&&currentOperator.connection_mode!=='ongoing')throw new PublicError('Ongoing access is no longer approved. Restart authorization.');
+  const connectionMode:ConnectionMode=input.scopes.includes('offline_access')?pending.connection_mode:'bounded';
+  const clientName=(await oauth.describeConsent(approved.request)).clientName.slice(0,256);
   const delegationId=crypto.randomUUID(),principalId=`oauth_${crypto.randomUUID().replaceAll('-','')}`;
   const now=new Date().toISOString();
-  const expiresAt=new Date(Math.min(Date.parse(operator.expires_at),Date.now()+(input.scopes.includes('offline_access')?GRANT_TTL:ACCESS_TTL)*1000)).toISOString();
+  const expiresAt=new Date(Math.min(Date.parse(pending.proposed_expires_at!),Date.parse(connectionDeadline(currentOperator,connectionMode,input.scopes)))).toISOString();
   const marker=('oauth:'+delegationId).padEnd(64,'_');
   await env.DB.batch([
    env.DB.prepare(`INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,scopes_json,auth_kind) VALUES(?,?,?,?,?,?,'oauth')`).bind(operator.tenant_id,principalId,'Approved MCP connection',marker,expiresAt,JSON.stringify(input.scopes)),
-   env.DB.prepare('INSERT INTO oauth_delegations(id,tenant_id,operator_id,principal_id,oauth_client_id,created_at,expires_at) VALUES(?,?,?,?,?,?,?)').bind(delegationId,operator.tenant_id,operator.id,principalId,pending.oauth_client_id,now,expiresAt),
+   env.DB.prepare('INSERT INTO oauth_delegations(id,tenant_id,operator_id,principal_id,oauth_client_id,created_at,expires_at,connection_mode,client_name) VALUES(?,?,?,?,?,?,?,?,?)').bind(delegationId,operator.tenant_id,operator.id,principalId,pending.oauth_client_id,now,expiresAt,connectionMode,clientName),
+   env.DB.prepare("INSERT INTO oauth_connection_events(id,tenant_id,operator_id,delegation_id,event,recorded_at,detail_json) VALUES(?,?,?,?,'consent_approved',?,?)").bind(crypto.randomUUID(),operator.tenant_id,operator.id,delegationId,now,JSON.stringify({connectionMode,scopes:input.scopes,clientIds:input.clientIds,expiresAt})),
    ...input.clientIds.map(id=>env.DB.prepare('INSERT INTO client_grants(tenant_id,principal_id,client_id) VALUES(?,?,?)').bind(operator.tenant_id,principalId,id)),
   ]);
   try {
    const result=await oauth.completeAuthorization({request:approved.request,userId:operator.id,metadata:{delegationId},scope:input.scopes,props:{delegationId} satisfies OAuthProps});
    return json(result,200,approved.headers);
   }catch(error){
-   await env.DB.prepare('UPDATE oauth_delegations SET revoked_at=? WHERE id=?').bind(new Date().toISOString(),delegationId).run();
+   await env.DB.batch([env.DB.prepare('UPDATE oauth_delegations SET revoked_at=? WHERE id=?').bind(new Date().toISOString(),delegationId),env.DB.prepare("INSERT INTO oauth_connection_events(id,tenant_id,operator_id,delegation_id,event,recorded_at,detail_json) VALUES(?,?,?,?,'issuance_failed',?,'{}')").bind(crypto.randomUUID(),operator.tenant_id,operator.id,delegationId,new Date().toISOString())]);
    throw error;
   }
  }catch(error){
@@ -128,8 +147,9 @@ async function assertIdentityStillAuthorized(request:Request,env:OAuthEnv,expect
  const operator=await getOperator(env.DB,actual);
  if(!operator||operator.id!==operatorId)throw new PublicError('Workspace authorization changed. Restart authorization.');
  validateSelection(scopes,scopeArray(operator.scopes_json),scopes,(await operatorClients(env.DB,operator)).map(c=>c.id),clientIds);
+ return operator;
 }
-async function readInput(request:Request):Promise<{handle:string;decision:'approve'|'deny';scopes:string[];clientIds:string[]}> {
+async function readInput(request:Request):Promise<{handle:string;decision:'approve'|'deny';scopes:string[];clientIds:string[];connectionMode:ConnectionMode}> {
  if(!request.headers.get('Content-Type')?.startsWith('application/json'))throw new PublicError('JSON input is required.');
  const reader=request.body?.getReader(); if(!reader)throw new PublicError('Input is required.');
  let size=0;const chunks:Uint8Array[]=[];
@@ -141,7 +161,8 @@ async function readInput(request:Request):Promise<{handle:string;decision:'appro
  if(typeof v.handle!=='string'||v.handle.length>512||!['approve','deny'].includes(String(v.decision)))throw new PublicError('Invalid consent input.');
  const scopes=v.scopes??[],clientIds=v.clientIds??[];
  if(!Array.isArray(scopes)||!Array.isArray(clientIds)||scopes.some(s=>typeof s!=='string')||clientIds.some(s=>typeof s!=='string'))throw new PublicError('Invalid consent input.');
- return {handle:v.handle,decision:v.decision as 'approve'|'deny',scopes,clientIds};
+ const connectionMode=v.connectionMode??'bounded';if(connectionMode!=='bounded'&&connectionMode!=='ongoing')throw new PublicError('Invalid connection duration.');
+ return {handle:v.handle,decision:v.decision as 'approve'|'deny',scopes,clientIds,connectionMode};
 }
 export function oauthMcpHandler(handler:(request:Request,env:OAuthEnv,ctx:ExecutionContext,principal:Principal)=>Promise<Response>) {
  const resource=new OAuthResourceServer<OAuthEnv,OAuthProps>({

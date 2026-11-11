@@ -1,0 +1,18 @@
+---
+import Shell from '../layouts/Shell.astro';
+import Brand from '../components/Brand.astro';
+import '../styles/workspace.css';
+import '../styles/access.css';
+import '../styles/connections.css';
+---
+<Shell title="Connected apps">
+<div class="access-app"><main id="main" class="invite-page connections-page"><Brand />
+<section class="panel invite-card"><h1>Connected apps<span>.</span></h1><p>Review and disconnect apps you authorized. This page cannot add permissions or extend access. It shows workspace authorizations, not whether an app is currently connected. Reconnecting or disconnecting inside the app may retire its tokens before this record expires.</p>
+<p id="connections-status" class="notice" role="status" aria-live="polite">Checking secure sign-in…</p>
+<div id="connections-login" hidden><div id="connections-sign-in" class="clerk-container"></div></div>
+<div id="connections-list"></div><button id="connections-more" class="text-button" type="button" hidden>Load more connections</button>
+<div class="consent-actions"><button id="connections-reload" class="text-button" type="button" hidden>Refresh connections</button><button id="connections-signout" class="text-button" type="button" hidden>Sign out</button></div>
+<a class="back-link" href="/">Back to workspace</a>
+</section></main></div>
+<script>import '../scripts/connections';</script>
+</Shell>

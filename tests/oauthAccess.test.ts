@@ -28,10 +28,10 @@ test('OAuth identity, principal kinds, expiry, client mapping and atomic new-cli
  await db.prepare("INSERT INTO clients VALUES('a','one','Client One','UTC')").run();
  await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,scopes_json) VALUES('a','service','Service',?,'2099-01-01','[]')").bind(await sha256(token)).run();
  const scopes=['mcp:connect','clients:write','metrics:read'];
- await db.prepare("INSERT INTO oauth_operators VALUES('operator','a','https://identity.test','user_1','marco@hexacombllc.com',?,'2099-01-01',NULL)").bind(JSON.stringify(scopes)).run();
+ await db.prepare("INSERT INTO oauth_operators(id,tenant_id,identity_issuer,identity_subject,verified_email,scopes_json,expires_at,revoked_at) VALUES('operator','a','https://identity.test','user_1','marco@hexacombllc.com',?,'2099-01-01',NULL)").bind(JSON.stringify(scopes)).run();
  await db.prepare("INSERT INTO oauth_operator_clients VALUES('a','operator','one')").run();
  await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,scopes_json,auth_kind) VALUES('a','oauthprincipal','OAuth',?,'2099-01-01',?,'oauth')").bind('oauth:synthetic'.padEnd(64,'_'),JSON.stringify(scopes)).run();
- await db.prepare("INSERT INTO oauth_delegations VALUES('delegation','a','operator','oauthprincipal','https://client.test/metadata',NULL,'2026-01-01','2099-01-01',NULL)").run();
+ await db.prepare("INSERT INTO oauth_delegations(id,tenant_id,operator_id,principal_id,oauth_client_id,oauth_grant_id,created_at,expires_at,revoked_at) VALUES('delegation','a','operator','oauthprincipal','https://client.test/metadata',NULL,'2026-01-01','2099-01-01',NULL)").run();
  await db.prepare("INSERT INTO client_grants VALUES('a','oauthprincipal','one')").run();
  const identity={issuer:'https://identity.test',subject:'user_1',sessionId:'session',email:'marco@hexacombllc.com'};
  assert.ok(await getOperator(db,identity));assert.equal(await getOperator(db,{...identity,subject:'user_2'}),null);assert.equal(await getOperator(db,{...identity,email:'christian@unreelviews.com'}),null);
@@ -58,6 +58,6 @@ test('OAuth identity, principal kinds, expiry, client mapping and atomic new-cli
  await db.prepare("UPDATE oauth_delegations SET revoked_at='2026-01-01' WHERE id='delegation'").run();assert.equal(await resolve(),null);
  await assert.rejects(db.prepare("UPDATE oauth_delegations SET principal_id='service' WHERE id='delegation'").run());
  await assert.rejects(db.prepare("UPDATE oauth_operators SET identity_subject='user_2' WHERE id='operator'").run());
- await db.prepare("INSERT INTO oauth_delegations VALUES('service-delegation','a','operator','service','https://client.test/metadata',NULL,'2026-01-01','2099-01-01',NULL)").run();
+ await db.prepare("INSERT INTO oauth_delegations(id,tenant_id,operator_id,principal_id,oauth_client_id,oauth_grant_id,created_at,expires_at,revoked_at) VALUES('service-delegation','a','operator','service','https://client.test/metadata',NULL,'2026-01-01','2099-01-01',NULL)").run();
  assert.equal(await resolveOAuthPrincipal(db,{delegationId:'service-delegation'},'https://client.test/metadata','operator',scopes),null);
 });

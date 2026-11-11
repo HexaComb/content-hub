@@ -18,7 +18,7 @@ test('OAuth provider discovery, consent, PKCE, audience, replay and revocation',
   for(const statement of sql.split(';').map(s=>s.trim()).filter(Boolean))await db.prepare(statement).run();for(const trigger of triggers)await db.prepare(trigger).run();
  }
  await db.prepare("INSERT INTO tenants VALUES('a','Synthetic agency')").run();
- await db.prepare(`INSERT INTO oauth_operators VALUES('operator','a','https://identity.test','user_1','marco@hexacombllc.com','["mcp:connect","metrics:read","clients:write","offline_access"]','2099-01-01',NULL)`).run();
+ await db.prepare(`INSERT INTO oauth_operators(id,tenant_id,identity_issuer,identity_subject,verified_email,scopes_json,expires_at,revoked_at) VALUES('operator','a','https://identity.test','user_1','marco@hexacombllc.com','["mcp:connect","metrics:read","clients:write","offline_access"]','2099-01-01',NULL)`).run();
  const send=(path:string,init?:Parameters<typeof mf.dispatchFetch>[1])=>mf.dispatchFetch(path.startsWith('https:')?path:origin+path,init);
  const metadata=await send('/.well-known/oauth-authorization-server');assert.equal(metadata.status,200);assert.equal((await metadata.json() as any).issuer,origin);
  const anon=await send('/mcp');assert.equal(anon.status,401);assert.match(anon.headers.get('WWW-Authenticate')!,/oauth-protected-resource\/mcp/);

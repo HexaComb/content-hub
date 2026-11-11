@@ -22,6 +22,7 @@ const isAdmin = area === 'admin';
         <a id="admin-link" class="workspace-link" href="/admin" aria-label="Administrator view" title="Administrator view" hidden><Icon name="grid" /><span>Administrator view</span></a>
       </>}
       <a class:list={["workspace-link", {"is-current":isSkills}]} href="/skills" aria-current={isSkills ? "page" : undefined} aria-label="Skills" title="Skills"><Icon name="book" /><span>Skills</span></a>
+      <a class="workspace-link" href="/connections" aria-label="Connected apps" title="Connected apps"><Icon name="lock" /><span>Connected apps</span></a>
     </nav>
     <div class="navigation-note"><Icon name="lock" /><div><strong>Private by design</strong><p>Read-only access to the<br/>work shared with you.</p></div></div>
     <div class="navigation-footer"><span>unreelviews</span><span>Client reporting</span></div>

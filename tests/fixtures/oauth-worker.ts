@@ -16,5 +16,6 @@ export default {async fetch(request:Request,env:OAuthEnv,ctx:ExecutionContext) {
  }
  if(url.pathname==='/test/client')return Response.json(await authorizationServer.getOAuthApi(env).createClient({clientName:'Synthetic client',redirectUris:['https://client.test/callback'],tokenEndpointAuthMethod:'none',grantTypes:['authorization_code','refresh_token'],responseTypes:['code']}));
  if(url.pathname==='/mcp'||url.pathname.startsWith('/.well-known/oauth-protected-resource'))return resource.fetch(request,env,ctx);
- return (await handleOAuthRoute(request,env,ctx,async req=>req.headers.get('X-Test-Identity')==='owner'?{issuer:env.CLERK_ISSUER!,subject:'user_1',sessionId:'synthetic',email:'marco@hexacombllc.com'}:null))??new Response('Consent shell');
+ const routeEnv=request.headers.get('X-Test-Fail-Refresh-DB')==='true'?{...env,DB:new Proxy(env.DB,{get(target,key){if(key==='prepare')return (sql:string)=>{if(sql.startsWith('UPDATE oauth_delegations SET expires_at='))throw new Error('Synthetic database outage');return target.prepare(sql);};return Reflect.get(target,key);}})}:env;
+ return (await handleOAuthRoute(request,routeEnv,ctx,async req=>req.headers.get('X-Test-Identity')==='owner'?{issuer:env.CLERK_ISSUER!,subject:'user_1',sessionId:'synthetic',email:'marco@hexacombllc.com'}:req.headers.get('X-Test-Identity')==='other'?{issuer:env.CLERK_ISSUER!,subject:'other_user',sessionId:'other_synthetic',email:'other@example.test'}:null))??new Response('Consent shell');
 }};

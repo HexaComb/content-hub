@@ -47,3 +47,17 @@ test('directory-form consent navigation normalizes only its path and preserves o
  assert.equal(safeSignInReturn('/authorize'+query,origin),origin+'/authorize'+query);
  assert.throws(()=>safeSignInReturn('/authorize//'+query,origin));
 });
+
+
+test('ongoing consent requires refresh, exact inactivity disclosure and an unchecked offline choice',()=>{
+ const ongoing:ConsentProposal={...proposal,connectionMode:'ongoing',refreshEnabled:true,idleTimeoutSeconds:2592000,scopes:[...proposal.scopes,{id:'offline_access',label:'Keep connected until I revoke access',selected:false}]};
+ assert.equal(validProposal(ongoing),true);
+ assert.equal(defaultScopeSelected(ongoing.scopes[1]),false);
+ for(const change of [{refreshEnabled:false},{idleTimeoutSeconds:900},{scopes:proposal.scopes},{scopes:{}},{connectionMode:'forever'}])assert.equal(validProposal({...ongoing,...change} as ConsentProposal),false);
+ assert.equal(validProposal({...proposal,connectionMode:'bounded'}),true);
+});
+test('connected apps sign-in return permits only the fixed local route',()=>{
+ assert.equal(safeSignInReturn('/connections',origin),origin+'/connections');
+ assert.equal(safeSignInReturn('/connections/',origin),origin+'/connections');
+ for(const path of ['/connections?redirect=https://attacker.invalid','/connections#id','//attacker.invalid/connections','/connections/other'])assert.throws(()=>safeSignInReturn(path,origin));
+});
