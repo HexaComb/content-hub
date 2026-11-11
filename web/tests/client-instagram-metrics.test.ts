@@ -11,13 +11,13 @@ test('canonical client Instagram projection drops all workflow data and unexpect
 });
 test('standalone renderer shows four canonical KPIs and only actual daily observations, with gaps and source detail',()=>withDom(canvas=>{
  renderClientInstagramMetrics(canvas as unknown as HTMLElement,model,()=>true);const all=canvas.walk();
- assert.equal(all.filter(node=>node.className==='cp-fact cp-fact-stat').length,4);assert.match(canvas.textContent,/Posts since beginning of month/);assert.match(canvas.textContent,/4 of 7 days recorded/);assert.match(canvas.textContent,/Not recorded/);assert.match(canvas.textContent,/2026-10-26T01:00:00Z/);assert.match(canvas.textContent,/Exact monthly observations and comparisons are listed separately/);
+ assert.equal(all.filter(node=>node.className==='cp-fact cp-fact-stat').length,4);assert.match(canvas.textContent,/Posts published/);assert.match(canvas.textContent,/4 of 7 days recorded/);assert.match(canvas.textContent,/Not recorded/);assert.match(canvas.textContent,/2026-10-26T01:00:00Z/);assert.match(canvas.textContent,/Monthly comparisons, when available/);
  assert.equal(all.filter(node=>node.tagName==='CIRCLE').length,4);assert.equal(all.filter(node=>node.tagName==='POLYLINE').length,1);assert.equal(all.filter(node=>node.tagName==='TBODY')[0].children.length,7);
  assert.doesNotMatch(canvas.textContent,/Content planning|Upcoming content|Answer history|Yes, queue|No, decline/);
 }));
 test('range changes remain read-only and stale controls cannot update detached private content',()=>withDom(canvas=>{
  let current=true;renderClientInstagramMetrics(canvas as unknown as HTMLElement,model,()=>current);const choices=canvas.walk().filter(node=>node.tagName==='BUTTON');
- choices.find(node=>node.textContent==='Last month')!.click();assert.match(canvas.textContent,/4 of 31 days recorded/);assert.equal(choices.find(node=>node.textContent==='Last 90 days')!.disabled,true);
+ choices.find(node=>node.textContent==='Past month')!.click();assert.match(canvas.textContent,/4 of 31 days recorded/);assert.equal(choices.find(node=>node.textContent==='Last 90 days')!.disabled,true);
  current=false;choices.find(node=>node.textContent==='Last 7 days')!.click();assert.match(canvas.textContent,/4 of 31 days recorded/);
 }));
 test('missing daily history stays empty rather than inventing a monthly curve',()=>withDom(canvas=>{

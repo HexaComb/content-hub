@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {runInNewContext} from 'node:vm';
 import * as view from '../src/scripts/instagram-view-state.ts';
+import * as copy from '../src/scripts/metric-copy.ts';
 const range={key:'7d' as const,start:'2026-11-01',end:'2026-11-08'};
 test('exclusive windows show seven days and never bridge absent or null dates',()=>{
  const plot=view.followerPlot([{date:'2026-11-01',value:0},{date:'2026-11-03',value:4},{date:'2026-11-04',value:5},{date:'2026-11-05',value:null},{date:'2026-11-06',value:5}],range);
@@ -18,10 +19,11 @@ test('source quality and timestamp survive daily alignment; unsafe content URLs 
 });
 class Node {tag:string;children:Node[]=[];textContent='';className='';hidden=false;disabled=false;dataset:Record<string,string>={};attributes=new Map<string,string>();onclick?:()=>void;classList={add:()=>{}};constructor(tag:string){this.tag=tag;}append(...children:Node[]){this.children.push(...children);}replaceChildren(...children:Node[]){this.children=children;}setAttribute(k:string,v:string){this.attributes.set(k,v);}removeAttribute(k:string){this.attributes.delete(k);}querySelectorAll(tag:string):Node[]{return this.children.flatMap(c=>[...(c.tag===tag?[c]:[]),...c.querySelectorAll(tag)]);} }
 const source=stripTypeScriptTypes(readFileSync(new URL('../src/scripts/instagram-dashboard.ts',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
+const kpiSource=stripTypeScriptTypes(readFileSync(new URL('../src/scripts/instagram-kpi-reading.ts',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
 function harness(admin=true){
  const root=new Node('section'),requests:string[]=[],resolvers:((v:any)=>void)[]=[],posts:{path:string;body:any;resolve:()=>void;reject:()=>void}[]=[],modals:any[]=[];let active=true;
- const context:any={...view,document:{createElement:(tag:string)=>new Node(tag),createElementNS:(_:string,tag:string)=>new Node(tag)},AbortController,Intl,crypto,api:(path:string)=>{requests.push(path);return new Promise(resolve=>resolvers.push(resolve));},message:()=> 'Failed',post:(path:string,body:any)=>new Promise<void>((resolve,reject)=>posts.push({path,body,resolve,reject:()=>reject(Error('Interrupted'))})),createModal:(options:any)=>{const modal={content:new Node('div'),open(){},close(){options.onClose?.();},dispose(){options.onClose?.();},setDismissible(){}};modals.push(modal);return modal;}};
- runInNewContext(source+'\nglobalThis.mount=mountInstagramDashboard;',context);
+ const context:any={...view,...copy,document:{createElement:(tag:string)=>new Node(tag),createElementNS:(_:string,tag:string)=>new Node(tag)},AbortController,Intl,crypto,api:(path:string)=>{requests.push(path);return new Promise(resolve=>resolvers.push(resolve));},message:()=> 'Failed',post:(path:string,body:any)=>new Promise<void>((resolve,reject)=>posts.push({path,body,resolve,reject:()=>reject(Error('Interrupted'))})),createModal:(options:any)=>{const modal={content:new Node('div'),open(){},close(){options.onClose?.();},dispose(){options.onClose?.();},setDismissible(){}};modals.push(modal);return modal;}};
+ runInNewContext('const appendInstagramKpi=(()=>{'+kpiSource+';return appendInstagramKpi;})();\n'+source+'\nglobalThis.mount=mountInstagramDashboard;',context);
  const mount=context.mount({root,apiPrefix:'/api/targets/c/p/plugins',month:'2026-11',admin,isCurrent:()=>active});return {root,mount,requests,resolvers,posts,modals,deactivate:()=>{active=false;}};
 }
 const data={month:'2026-11',asOfDate:'2026-11-07',timezone:'UTC',kpis:[],followers:{ranges:[range],points:[]},pending:[],ideas:[],executed:[],answers:[],workflowAvailable:true};
@@ -33,7 +35,7 @@ test('recipient never renders workflow content even if a response wrongly includ
  const h=harness(false);const promise=h.mount.load();h.resolvers[0]({...data,ideas:[{title:'PRIVATE IDEA'}]});await promise;assert.ok(!text(h.root).includes('PRIVATE IDEA'));assert.ok(text(h.root).includes('shared metrics only'));
 });
 test('superseded and disposed requests cannot restore stale project data',async()=>{
- const h=harness();const first=h.mount.load();const second=h.mount.updateMonth('2026-10');h.resolvers[1]({...data,month:'2026-10'});await second;h.resolvers[0](data);await first;assert.ok(text(h.root).includes('2026-10'));assert.ok(!text(h.root).includes('Reporting month 2026-11'));
+ const h=harness();const first=h.mount.load();const second=h.mount.updateMonth('2026-10');h.resolvers[1]({...data,month:'2026-10'});await second;h.resolvers[0](data);await first;assert.ok(text(h.root).includes('October 2026'));assert.ok(!text(h.root).includes('November 2026'));
  const third=h.mount.load();h.mount.dispose();h.resolvers[2](data);await third;assert.equal(h.root.hidden,true);assert.equal(h.root.children.length,0);
 });
 

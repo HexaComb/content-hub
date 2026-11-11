@@ -1,18 +1,11 @@
 import {defaultPresentation,presentationDocumentSchema,type PresentationDocument} from '../../../src/presentationSchema.ts';
 import {themePresentation} from './theme.ts';
-import {change,monthLabel,value} from './render.ts';
-import type {Metric,Reading,Report} from './types';
+import {monthLabel,value,metricInsight,comparisonContext,readingQuality} from './metric-copy.ts';
+import {appendMetricReading} from './metric-reading.ts';
+export {comparisonContext,readingQuality} from './metric-copy.ts';
+import type {Metric,Report} from './types';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,cls?:string):HTMLElementTagNameMap[K]{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;}
-export function readingQuality(reading:Reading|null):string {
- if(!reading)return 'Missing reading';
- return `${reading.quality}${reading.provider?` · Source: ${reading.provider}`:''}${reading.collectedAt?` · Collected: ${reading.collectedAt}`:''}`;
-}
-export function comparisonContext(metric:Metric):string {
- if(metric.relativePercent!==null)return `${new Intl.NumberFormat('en',{maximumFractionDigits:2,signDisplay:'exceptZero'}).format(metric.relativePercent)}% relative to previous month`;
- if(metric.reason==='relative_change_out_of_range'||metric.reason==='numeric_change_out_of_range')return 'Change unavailable: result outside the supported numeric range';
- return metric.reason==='zero_baseline'?'Relative change unavailable: zero baseline':'Complete, comparable readings are needed for relative change';
-}
 export function clearClientPresentation(canvas:HTMLElement,ledger:HTMLElement){
  canvas.replaceChildren();ledger.replaceChildren();canvas.className='';
  for(let index=canvas.style.length-1;index>=0;index--){const key=canvas.style.item(index);if(key.startsWith('--project-'))canvas.style.removeProperty(key);}
@@ -23,25 +16,12 @@ export function resolvePresentationDocument(raw:unknown,report:Report):Presentat
 }
 function missingBlock(message='This report block is unavailable.') {return el('p',message,'cp-unavailable');}
 function metricBlock(metric:Metric,variant:'statement'|'stat'|'inline',report:Report){
- const block=el('article',undefined,`cp-fact cp-fact-${variant}`);
- block.append(el('h3',metric.label,'cp-fact-label'),el('p',value(metric.current,metric.unit),'cp-fact-value'));
- const direction=['improved','declined','unchanged','changed'].includes(metric.change)?metric.change:'neutral';
- block.append(el('p',`${change(metric)} · ${direction==='neutral'?'Comparison unavailable':direction}`,`cp-fact-change cp-change-${direction}`),el('p',comparisonContext(metric),'cp-fact-context'));
- block.append(el('p',`${monthLabel(report.month)} · Unit: ${metric.unit}`,'cp-fact-period'),el('p',readingQuality(metric.current),'cp-fact-quality'));
- if(metric.current?.quality!=='complete')block.append(el('span',metric.current?.quality==='partial'?'Partial period':'Missing reading','cp-quality-warning'));
- return block;
+ const block=el('article',undefined,`cp-fact cp-fact-${variant}`);appendMetricReading(block,metric,report);return block;
 }
 function comparisonBlock(metrics:Metric[],report:Report){
  const group=el('div',undefined,'cp-comparisons');
  if(!metrics.length){group.append(missingBlock('No shared readings in this section.'));return group;}
- for(const metric of metrics){
-  const section=el('article',undefined,'cp-comparison');section.append(el('h3',metric.label));
-  const pair=el('dl',undefined,'cp-comparison-pair');
-  for(const [reading,month,kind] of [[metric.current,report.month,'selected'],[metric.previous,report.previousMonth,'previous']] as const){
-   const cell=el('div',undefined,`cp-reading cp-reading-${kind}`);cell.append(el('dt',monthLabel(month)),el('dd',value(reading,metric.unit)),el('p',readingQuality(reading),'cp-fact-quality'));pair.append(cell);
-  }
-  section.append(pair,el('p',`${change(metric)} · ${comparisonContext(metric)} · Unit: ${metric.unit}`,'cp-fact-context'));group.append(section);
- }
+ for(const metric of metrics){const section=el('article',undefined,'cp-comparison');appendMetricReading(section,metric,report);group.append(section);}
  return group;
 }
 function applyPresentationTheme(canvas:HTMLElement,design:PresentationDocument){
@@ -84,10 +64,11 @@ export function renderClientPresentation(canvas:HTMLElement,ledger:HTMLElement,r
 export function renderLedger(ledger:HTMLElement,report:Report){
  ledger.replaceChildren();const heading=el('h2','The data behind this report');heading.id='client-ledger-heading';
  ledger.append(el('p','DATA & METHODOLOGY','cp-kicker'),heading,el('p',`${monthLabel(report.month)} compared with ${monthLabel(report.previousMonth)}. All monthly metrics available to your verified account on this page are listed below, whether or not they appear in the design. Values are supplied observations for exact monthly periods, not estimated totals.`,'cp-ledger-intro'));
- ledger.append(el('p','Changes are provided only when the underlying readings are comparable. A missing value is not zero. Partial periods are labeled. Percentage-point changes and relative percentage changes are different measures; relative change is unavailable when the previous value is zero. Design copy is supplied commentary, not verified analysis.','cp-ledger-method'));
+ const details=el('details',undefined,'cp-ledger-details');details.append(el('summary','View all readings & collection details'));ledger.append(details);
+ details.append(el('p','Changes are provided only when the underlying readings are comparable. A missing value is not zero. Partial periods are labeled. Percentage-point changes and relative percentage changes are different measures; relative change is unavailable when the previous value is zero. Design copy is supplied commentary, not verified analysis.','cp-ledger-method'));
  if(!report.metrics.length){ledger.append(missingBlock('There are no shared metric readings to display.'));return;}
  const scroll=el('div',undefined,'cp-ledger-scroll');scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Full report data. Scroll horizontally on small screens.');
  const table=el('table'),caption=el('caption',`Complete report: ${report.target.name}, ${monthLabel(report.month)}`);table.append(caption);
  const head=el('thead'),row=el('tr');for(const label of ['Metric & unit',monthLabel(report.month),monthLabel(report.previousMonth),'Change','Quality & sources']){const cell=el('th',label);cell.scope='col';row.append(cell);}head.append(row);table.append(head);
- const body=el('tbody');for(const metric of report.metrics){const row=el('tr'),name=el('th');name.scope='row';name.append(el('span',metric.label),el('small',`Unit: ${metric.unit} · Direction: ${metric.direction}`));row.append(name,el('td',value(metric.current,metric.unit)),el('td',value(metric.previous,metric.unit)));const delta=el('td');delta.append(el('p',change(metric)),el('small',comparisonContext(metric)));const sources=el('td');sources.append(el('p',`Selected month: ${readingQuality(metric.current)}`),el('p',`Previous month: ${readingQuality(metric.previous)}`));row.append(delta,sources);body.append(row);}table.append(body);scroll.append(table);ledger.append(scroll);
+ const body=el('tbody');for(const metric of report.metrics){const row=el('tr'),name=el('th');name.scope='row';name.append(el('span',metric.label),el('small',`Unit: ${metric.unit} · Direction: ${metric.direction}`));row.append(name,el('td',value(metric.current,metric.unit)),el('td',value(metric.previous,metric.unit)));const delta=el('td');delta.append(el('p',metricInsight(metric,report.previousMonth).headline),el('small',comparisonContext(metric)));const sources=el('td');sources.append(el('p',`Selected month: ${readingQuality(metric.current)}`),el('p',`Previous month: ${readingQuality(metric.previous)}`));row.append(delta,sources);body.append(row);}table.append(body);scroll.append(table);details.append(scroll);
 }

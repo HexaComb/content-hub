@@ -59,7 +59,7 @@ test('browser invitations require verified admins, exact project review and isol
  assert.equal((await accept(viewer,{...env,ADMIN_ACCESS_ENABLED:'false'})).status,400);
  const accepted=await accept(viewer);assert.equal(accepted.status,200);assert.equal((await accepted.json() as any).projectPath,'/project?client=c&project=p');
  assert.equal((await accept(viewer)).status,400);
- const report=await portalReport(db,viewer,'c','p','2026-10');assert.equal(report.target.clientName,'Client a');assert.deepEqual(report.metrics.map(m=>m.id),['m']);
+ const report=await portalReport(db,viewer,'c','p','2026-10');assert.equal(report.target.clientName,'Client a');assert.deepEqual(report.metrics.map(m=>m.id),['m']);assert.equal('definition' in report.metrics[0],false);assert.equal(report.metrics[0].semantics,'period_total');assert.equal(report.metrics[0].timezone,'UTC');
  await assert.rejects(portalReport(db,viewer,'c','sibling','2026-10'),/not available/);
  assert.deepEqual((await portalTargets(db,{...viewer,subject:'different-user'})).targets,[]);
  const limited=await(await call()).text();for(const privateKey of [token,'token_hash','approval_digest','identity_subject','provider_id'])assert.equal(limited.includes(privateKey),false);

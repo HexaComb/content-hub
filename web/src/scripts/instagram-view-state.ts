@@ -1,8 +1,8 @@
 /** Rendering-only helpers. Metric definitions and reporting windows come from the API. */
 export type FollowerPoint={date:string;value:number|null;quality?:string;sourceQuality?:string|null;reason?:string|null;asOf?:string|null};
 export type FollowerRange={key:'7d'|'1m'|'90d'|'6m';start:string;end:string};
-export const rangeLabels={'7d':'Last 7 days','1m':'Last month','90d':'Last 90 days','6m':'Last 6 months'};
-export const kpiLabels={followers:'Followers',posts:'Posts since beginning of month',average_likes_per_post:'Average likes per post',posts_per_week:'Posts per week (avg)'};
+export const rangeLabels={'7d':'Last 7 days','1m':'Past month','90d':'Last 90 days','6m':'Last 6 months'};
+export const kpiLabels={followers:'Followers',posts:'Posts published',average_likes_per_post:'Average likes per post',posts_per_week:'Posts per week'};
 const day=86400000;
 export function followerPlot(points:FollowerPoint[],range:FollowerRange){
  const start=Date.parse(range.start+'T00:00:00Z'),end=Date.parse(range.end+'T00:00:00Z');

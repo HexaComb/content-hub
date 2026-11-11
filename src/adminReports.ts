@@ -30,7 +30,7 @@ export async function adminReport(db:D1Database,identity:HumanIdentity|null,env:
  try{range=monthRange(month);priorMonth=previousMonth(month);priorRange=monthRange(priorMonth);}catch{throw new PublicError('Use a valid reporting month in YYYY-MM format.');}
  const target=await db.prepare(`SELECT ${columns} ${joins} WHERE c.tenant_id=? AND c.id=? AND p.id=?`).bind(tenantId,clientId,projectId).first<OverviewRow>();
  if(!target)throw new PublicError('Reporting target is not available.');
- const definitions=(await db.prepare(`SELECT m.id,m.key,m.label,m.unit,m.direction FROM metrics m JOIN project_metrics pm ON pm.tenant_id=m.tenant_id AND pm.client_id=m.client_id AND pm.metric_id=m.id WHERE pm.tenant_id=? AND pm.client_id=? AND pm.project_id=? ORDER BY m.key LIMIT 201`).bind(tenantId,clientId,projectId).all<{id:string;key:string;label:string;unit:string;direction:Direction}>()).results;
+ const definitions=(await db.prepare(`SELECT m.id,m.key,m.label,m.unit,m.direction,m.semantics,m.timezone FROM metrics m JOIN project_metrics pm ON pm.tenant_id=m.tenant_id AND pm.client_id=m.client_id AND pm.metric_id=m.id WHERE pm.tenant_id=? AND pm.client_id=? AND pm.project_id=? ORDER BY m.key LIMIT 201`).bind(tenantId,clientId,projectId).all<{id:string;key:string;label:string;unit:string;direction:Direction;semantics:string;timezone:string}>()).results;
  if(definitions.length>200)throw new PublicError('Too many reporting metrics for one report.');
  // Explicit report columns only: no invitation tokens, credentials, private notes,
  // source payloads, operator mappings or unrelated client observations are loaded.

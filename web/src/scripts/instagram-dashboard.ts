@@ -1,6 +1,8 @@
+import {appendInstagramKpi} from './instagram-kpi-reading.ts';
+import {dateLabel,monthLabel} from './metric-copy.ts';
 import {api,post,message} from './api';
 import {createModal} from './modal';
-import {followerPlot,lastIncludedDate,metricReason,rangeLabels,kpiLabels,metricValue,safeContentUrl,type FollowerPoint,type FollowerRange} from './instagram-view-state';
+import {followerPlot,lastIncludedDate,rangeLabels,kpiLabels,metricValue,safeContentUrl,type FollowerPoint,type FollowerRange} from './instagram-view-state';
 export type InstagramKpi={kind:keyof typeof kpiLabels;value:number|null;quality:string;sourceQuality?:string|null;asOf:string|null;periodStart:string|null;periodEnd:string|null;reason:string|null};
 type ContentItem={id:string;title:string;format:'reel'|'post'|null;status:string;idea:string|null;platform:string;revision:number;contentUrl:string|null};
 type Idea=ContentItem;
@@ -28,18 +30,18 @@ export function mountInstagramDashboard(context:{root:HTMLElement;apiPrefix:stri
   finally{signal?.removeEventListener('abort',abort);if(current()&&request===sequence)root.removeAttribute('aria-busy');}
  }
  function chart(model:InstagramDashboardData){
-  const panel=section('Followers over time','Daily recorded follower counts. Missing dates stay empty; no estimates or interpolated values.');
+  const panel=section('Followers over time','Your audience size each day. Gaps mean no reading was recorded; they do not mean zero followers.');
   const choices=el('div',undefined,'ig-ranges');choices.setAttribute('role','group');choices.setAttribute('aria-label','Follower history range');
   const graph=el('div',undefined,'ig-graph');const update=(key:FollowerRange['key'])=>{rangeKey=key;for(const node of choices.querySelectorAll('button'))node.setAttribute('aria-pressed',String(node.dataset.range===key));draw();};
   for(const key of ['7d','1m','90d','6m'] as const){const choice=button(rangeLabels[key],()=>update(key));choice.dataset.range=key;choice.setAttribute('aria-pressed',String(rangeKey===key));choice.disabled=!model.followers.ranges.some(range=>range.key===key);choices.append(choice);}
   function draw(){
    graph.replaceChildren();const range=model.followers.ranges.find(range=>range.key===rangeKey);if(!range){graph.append(empty('This history range is not available.'));return;}
-   const plot=followerPlot(model.followers.points,range);graph.append(notice(`${range.start} – ${lastIncludedDate(range.end)} · ${model.timezone} · ${plot.observed} of ${plot.days} days recorded`));
+   const plot=followerPlot(model.followers.points,range);graph.append(notice(`${dateLabel(range.start)} – ${dateLabel(lastIncludedDate(range.end))} · ${plot.observed} of ${plot.days} days recorded`));
    if(!plot.observed){graph.append(empty('No daily follower observations for this range. Monthly totals cannot be used as daily history.'));return;}
    const svg=svgNode('svg',{viewBox:'0 0 720 260',role:'img','aria-label':`${rangeLabels[rangeKey]} follower history, ${plot.observed} of ${plot.days} days recorded. Full values follow in the data table.`});
    for(let i=0;i<3;i++){const y=32+i*88,value=plot.high-(plot.high-plot.low)*i/2;svg.append(svgNode('line',{x1:'64',x2:'684',y1:String(y),y2:String(y),class:'ig-gridline'}));const label=svgNode('text',{x:'54',y:String(y+4),'text-anchor':'end',class:'ig-axis'});label.textContent=metricValue(value);svg.append(label);}
    for(const segment of plot.segments){if(segment.length>1)svg.append(svgNode('polyline',{points:segment.map(point=>`${point.x},${point.y}`).join(' '),fill:'none',class:'ig-series'}));for(const point of segment){const mark=svgNode('circle',{cx:String(point.x),cy:String(point.y),r:'3',class:'ig-point'});const title=svgNode('title',{});title.textContent=`${point.date}: ${metricValue(point.value)} followers`;mark.append(title);svg.append(mark);}}
-   for(const [x,date,anchor] of [['64',range.start,'start'],['684',lastIncludedDate(range.end),'end']]){const label=svgNode('text',{x,y:'242','text-anchor':anchor,class:'ig-axis'});label.textContent=date;svg.append(label);}graph.append(svg);
+   for(const [x,date,anchor] of [['64',range.start,'start'],['684',lastIncludedDate(range.end),'end']]){const label=svgNode('text',{x,y:'242','text-anchor':anchor,class:'ig-axis'});label.textContent=new Date(date+'T00:00:00Z').toLocaleDateString('en',{month:'short',day:'numeric',timeZone:'UTC'});svg.append(label);}graph.append(svg);
    const details=el('details',undefined,'ig-data');details.append(el('summary','View daily values and missing dates'));const table=el('table');const head=el('thead'),header=el('tr');for(const text of ['Date','Followers','Quality / coverage','Source updated']){const cell=el('th',text);cell.scope='col';header.append(cell);}head.append(header);table.append(head);const body=el('tbody');for(const point of plot.daily){const row=el('tr');row.append(el('td',point.date),el('td',point.value===null?(point.reason==='invalid_value'?'Invalid source value':'Not recorded'):metricValue(point.value)),el('td',(point.quality??'Not specified')+(point.sourceQuality&&point.sourceQuality!==point.quality?` (source: ${point.sourceQuality})`:'')),el('td',point.asOf??'Not recorded'));body.append(row);}table.append(body);details.append(table);graph.append(details);
   }
   draw();panel.append(choices,graph);return panel;
@@ -57,9 +59,9 @@ export function mountInstagramDashboard(context:{root:HTMLElement;apiPrefix:stri
  }
  function render(){
   if(!current()||!data)return;const model=data;root.replaceChildren();
-  root.append(el('p',`Reporting month ${model.month} · Through ${model.asOfDate} · ${model.timezone}`,'ig-context'));
+  root.append(el('p',`${monthLabel(model.month)} · Reporting through ${dateLabel(model.asOfDate)} · ${model.timezone}`,'ig-context'));
   const cards=el('div',undefined,'ig-kpis');
-  for(const [kind,label] of Object.entries(kpiLabels)){const kpi=model.kpis.find(item=>item.kind===kind),card=el('article',undefined,'ig-kpi');card.append(el('h2',label),el('p',metricValue(kpi?.value),'ig-value'));card.append(el('p',metricReason(kpi?.reason)??(kpi?.value==null?'No recorded value.':`${kpi.quality} · ${kpi.periodStart??model.month} – ${kpi.periodEnd?lastIncludedDate(kpi.periodEnd):model.asOfDate}`),'ig-help'));if(kpi?.asOf)card.append(el('p',`Source updated ${kpi.asOf}`,'ig-help'));cards.append(card);}root.append(cards,chart(model));
+  for(const kind of Object.keys(kpiLabels) as (keyof typeof kpiLabels)[]){const card=el('article',undefined,'ig-kpi');appendInstagramKpi(card,kind,model.kpis.find(item=>item.kind===kind));cards.append(card);}root.append(cards,chart(model));
   if(!context.admin||!model.workflowAvailable){root.append(section('Content planning','Your access includes shared metrics only. Pending content, ideas and answer history have not been shared with you.'));return;}
   if(model.truncated)root.append(notice('Showing the most recent available content records. Older records may not appear in these lists.'));
   const pending=section('Pending reels & posts','Stored work in progress. A schedule here does not publish content.');

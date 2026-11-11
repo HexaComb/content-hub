@@ -31,3 +31,11 @@ The initial report uses exact month-to-next-month boundaries. It reads the lates
 Daily observations are not automatically summed. Distinct reach is not additive; follower counts are snapshots; click-through rate needs numerator/denominator weighting; average search position is not a simple average of daily averages. A later aggregation engine needs metric-specific policies and sufficient source data. Until then, agents submit source-provided monthly totals/averages/snapshots explicitly.
 
 Comparisons describe changes, not proof that the agency caused them. Reports must retain provider/filter/timezone differences, source freshness and whether definitions are genuinely comparable.
+
+## Reading reports
+
+Workspace and standalone client reports use the same dated current/previous reading component. The server supplies all deltas and improvement verdicts; the UI only formats them into sentences. Percentage-point changes are spelled out. Relative change, reporting timezone and collection details are available under “How to read this metric”. Incomplete readings have visible coverage labels and no performance rating. A missing observation remains “Not available”, while an actual zero remains 0.
+
+Human report responses add the approved metric's `semantics` and `timezone` to the existing numeric allowlist. Metric `definition`, dimensions, source notes/URLs and internal provenance remain private. The renderer uses the reporting basis (total, average or snapshot), not an inferred definition of an arbitrary key.
+
+The main view contains one comparison per metric. The full reading table is expandable; the duplicate absolute-size bar chart is removed. This also avoids suggesting positive magnitude for signed custom measures.

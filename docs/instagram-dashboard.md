@@ -32,3 +32,9 @@ Ideas are project-scoped records with a title, idea, explicit reel/post format a
 An answered idea's title, idea and format cannot be silently rewritten. Completed and declined records are terminal; propose a new idea if the plan changes. Each mutation has independent optimistic revisions, idempotency receipts and an immutable audit. Answer history contains the exact yes/no decision and its then-current idea/title snapshot. Existing project-linked Instagram drafts and active production records are included in pending with unknown format where the original content schema lacks one.
 
 Workflow and decisions are available only to verified browser administrators and appropriately scoped MCP clients. Recipient metric invitations do not authorize content/ideas/answer history. No publishing service, external integration, credential, invitation, grant or automatic production action is created.
+
+## Reading the dashboard
+
+Both workspace and standalone client cards use `appendInstagramKpi`: a short name, one-line explanation, recorded value and explicit coverage dates. Exclusive interval ends are displayed as the last included date. A partial-period label stays visible, while collection timestamps and differing source-quality labels are available in “View recording details”. These cards do not invent a previous-period comparison. Followers remain the latest recorded snapshot, not a promise of today's live audience size.
+
+Follower history uses readable calendar labels and reports how many days have observations. “Past month” means the trailing calendar-month range, distinct from the reporting-month selector. Missing days remain gaps. Workflow data and actions retain their original authorization and confirmation boundaries.

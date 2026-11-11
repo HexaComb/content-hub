@@ -35,7 +35,7 @@ try{
    assert.equal(await page.locator('.metric-card').count(),4);
    assert.equal(await page.locator('#metric-rows tr').count(),4);
    assert.ok(await page.locator('.quality-warning').isVisible());
-   assert.match(await page.locator('#metric-rows').innerText(),/partial/);
+   assert.match(await page.locator('#metric-rows').innerText(),/Partial/);
    assert.equal(await page.locator('[data-project-theme]').count(),1);
    if(width!==320)await page.screenshot({path:output+`/${route==='/'?'client':'admin'}-${key}-${width}.png`,fullPage:true});
   }
