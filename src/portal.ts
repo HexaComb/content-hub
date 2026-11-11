@@ -46,13 +46,13 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
   const target = targets[0];
   // Scope is the union of independently approved grants, intersected with the
   // current target mapping. Newly linked metrics never expand an old grant.
-  const definitions = (await db.prepare(`SELECT m.id,m.key,m.label,m.unit,m.direction FROM metrics m
+  const definitions = (await db.prepare(`SELECT m.id,m.key,m.label,m.unit,m.direction,m.semantics,m.timezone FROM metrics m
     JOIN project_metrics pm ON pm.tenant_id=m.tenant_id AND pm.client_id=m.client_id AND pm.metric_id=m.id
     WHERE pm.tenant_id=? AND pm.client_id=? AND pm.project_id=? AND EXISTS(
       SELECT 1 ${targetJoin} JOIN json_each(i.metric_ids_json) approved ON approved.value=m.id
       WHERE ${activeGrant} AND i.tenant_id=m.tenant_id AND i.client_id=m.client_id AND i.project_id=pm.project_id)
     ORDER BY m.key LIMIT 201`).bind(target.tenant_id, clientId, projectId, ...accessBindings(identity))
-    .all<{ id: string; key: string; label: string; unit: string; direction: Direction }>()).results;
+    .all<{ id: string; key: string; label: string; unit: string; direction: Direction; semantics: string; timezone: string }>()).results;
   if (definitions.length > 200) throw new PublicError("Too many reporting metrics. Contact your administrator.");
   // Read only allowlisted columns and recheck authorization in the observation
   // query as well. Internal provenance, source URLs and notes are never loaded.

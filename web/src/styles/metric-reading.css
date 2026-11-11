@@ -1,0 +1,47 @@
+/* The same hierarchy on workspace and client pages, using each canvas's palette. */
+.metric-reading {
+  color: var(--cp-ink, var(--project-text, var(--ui-text)));
+  --mr-muted: var(--cp-muted, var(--project-muted, var(--ui-muted)));
+  --mr-line: var(--cp-rule, var(--project-border, var(--ui-line)));
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  font-family: var(--project-body, var(--ui-sans, ui-sans-serif, system-ui, sans-serif));
+}
+.mr-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.metric-reading .mr-title { font-family: inherit; font-size: 16px; font-weight: 600; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.mr-status { flex-shrink: 0; display: inline-block; padding: 4px 8px; border: 1px solid var(--mr-line); border-radius: 4px; color: var(--mr-muted); font-size: 11px; font-weight: 600; line-height: 1.5; }
+.mr-positive { color: #245d48; background: #d8ede3; border-color: #aacbbd; }
+.mr-negative { color: #823d24; background: #f4e2d6; border-color: #d7b4a0; }
+.mr-definition { color: var(--mr-muted); font-size: 13px; line-height: 1.65; margin: 12px 0 0; overflow-wrap: anywhere; max-width: 65ch; }
+.mr-pair { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: start; margin: 28px 0; }
+.mr-period { color: var(--mr-muted); font-size: 12px; line-height: 1.5; margin: 0 0 8px; }
+.mr-value { font-size: clamp(30px, 3vw, 46px); font-weight: 550; line-height: 1.15; font-family: inherit; letter-spacing: -.045em; font-variant-numeric: tabular-nums; margin: 0; overflow-wrap: anywhere; }
+.mr-previous { border-left: 1px solid var(--mr-line); padding-left: 20px; }
+.mr-previous .mr-value { color: var(--mr-muted); font-size: clamp(22px, 2vw, 30px); letter-spacing: -.03em; line-height: 1.35; }
+.metric-reading .mr-missing { font-size: 18px; line-height: 1.5; font-weight: 450; letter-spacing: 0; color: var(--mr-muted); }
+.mr-quality { display: block; margin-top: 8px; font-size: 12px; color: var(--mr-muted); }
+.mr-takeaway { margin-top: auto; padding: 20px 0; border-top: 1px solid var(--mr-line); }
+.mr-change { font-size: 14px; font-weight: 600; line-height: 1.65; margin: 0; }
+.mr-guidance { color: var(--mr-muted); font-size: 12px; line-height: 1.65; margin: 4px 0 0; }
+.mr-details { border-top: 1px solid var(--mr-line); }
+.mr-details summary { cursor: pointer; padding: 14px 0 0; min-height: 44px; font-size: 12px; line-height: 1.7; color: var(--mr-muted); }
+.mr-details summary:hover { color: inherit; }
+.mr-details summary:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 2px; }
+.mr-details-body { font-size: 12px; line-height: 1.7; color: var(--mr-muted); padding-top: 12px; }
+.mr-details-body p { margin: 0 0 8px; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .mr-heading { flex-wrap: wrap; gap: 8px; }
+  .mr-pair { gap: 12px; margin-block: 24px; }
+  .mr-previous { padding-left: 12px; }
+  .mr-value { font-size: 34px; }
+  .mr-previous .mr-value { font-size: 24px; }
+}
+@media print { .mr-details > * { display: block; } }
+
+.ig-reading .mr-definition { min-height: 3.3em; }
+.ig-reading-value { margin: 24px 0 12px; }
+.ig-reading > .mr-period { font-size: 13px; margin-bottom: 8px; }
+.ig-reading > .mr-details { margin-top: 20px; }

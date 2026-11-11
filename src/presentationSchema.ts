@@ -44,15 +44,16 @@ export const workspaceReportTheme:ProjectTheme = {
  name:'In perspective',
  colors:{background:'#101214',surface:'#171a1d',raised:'#202428',text:'#f1efe9',muted:'#a8afb1',accent:'#a6e3cd',border:'#30363a'},
  typography:{heading:'editorial',body:'sans'},
+ layout:{...themePresets.studio.layout,columns:2},
  brand:{eyebrow:'YOUR WORK, IN PERSPECTIVE',tagline:'A clear view of your performance and progress.',logo:null},
 };
 export function defaultPresentation(theme:ProjectTheme=workspaceReportTheme):PresentationDocument {
  return {schemaVersion:1,name:'Client report',theme,width:'wide',sections:['intro','facts'],nodes:[
-  {id:'intro',type:'band',tone:'page',space:'generous',children:['eyebrow','title','tagline']},
+  {id:'intro',type:'band',tone:'page',space:'tight',children:['eyebrow','title','tagline']},
   {id:'eyebrow',type:'text',role:'eyebrow',text:theme.brand.eyebrow||'YOUR MONTH IN FOCUS'},
-  {id:'title',type:'text',role:'title',text:'The story in your numbers.'},
+  {id:'title',type:'text',role:'title',text:'Your performance.'},
   {id:'tagline',type:'text',role:'body',text:theme.brand.tagline},
-  {id:'facts',type:'band',tone:'surface',space:'generous',children:['all-metrics']},
+  {id:'facts',type:'band',tone:'surface',space:'normal',children:['all-metrics']},
   {id:'all-metrics',type:'metric_collection',variant:'stat'},
  ]};
 }

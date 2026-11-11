@@ -33,11 +33,15 @@ The directory includes a search field for already loaded entries. It filters pro
 
 ## Reports
 
-Default reports use 4 KPI columns, 2 below 1100px and 1 below 420px. Cards give the current value, previous-month baseline, absolute change and relative comparison. Text explicitly identifies missing/partial data; colors never establish improvement on their own. The comparison chart and data-quality notes have separate visual weight. Metric source tables keep labeled keyboard-scrollable regions.
+Default reports use two spacious metric columns, switching to one below 700px. Each card has one consistent reading order: metric label, reporting basis (total/average/snapshot where supplied), dated current and previous values, a plain-language change, and the direction that counts as improvement. The two periods sit side by side rather than requiring a separate chart or a mental comparison with a footer.
 
-Instagram uses the same spacing, typography and mint palette, with grouped history-range controls and an expandable daily table. Missing dates still break lines; no estimates or sample readings are introduced. All workflow confirmation behavior remains in the existing controller.
+Use the server's comparison verdict and deltas. Say “Improved”, “Declined”, “No change”, “Changed” or “Not comparable”; do not infer success from an upward arrow. Spell out “percentage points”. Keep relative percentages in “How to read this metric” so two different change measures do not compete. Zero baselines, partial periods, missing values, signed custom values and unsupported numeric changes each retain an honest explanation. Very small nonzero readings must not round into zero.
 
-Saved report themes remain authoritative. Default report CSS is scoped outside `data-project-theme`. The standalone `/client` page uses dark chrome around its authored canvas. Uncustomized client presentations now start with the dark **In perspective** theme; explicitly saved project designs continue to render their own colors, typography, structure and order.
+The repeated monthly bar chart is removed. Exact readings and collection details remain in a keyboard-accessible, closed-by-default disclosure. The visible cards include both periods' partial-period labels. No metric definitions or private source notes are disclosed: only allowlisted reporting semantics and timezone are added to report responses.
+
+Instagram uses the same two-column rhythm and shared card renderer across workspace and client pages. Short metric names have one-line explanations and explicit recorded periods. Partial coverage stays visible, while update/quality details can be expanded. “Past month” names the trailing chart range distinctly from the selected calendar month. Date labels are human readable. Missing dates still break lines; there are no estimated histories or manufactured KPI changes. Workflow and confirmation behavior remain in the existing controller.
+
+Saved report themes remain authoritative for colors, fonts and card treatment. Default report CSS is scoped outside `data-project-theme`; shared reading structure uses project color tokens. Monthly comparisons now live in each card rather than a separate reorderable chart. The standalone `/client` page keeps authored bands and explicit metric selections, using the same reading component inside them. Uncustomized presentations use the dark **In perspective** theme, two columns, and a shorter introduction so the numbers appear sooner. The complete evidence ledger remains outside the authored composition, in a native disclosure.
 
 ## Access, guides and dialogs
 
@@ -59,4 +63,4 @@ The image is a bespoke editorial card: ivory sans/italic lettering and offset mi
 
 Use `npm run check` for both TypeScript projects, backend/SQL/frontend tests, Astro/Worker builds and Worker integration tests. Check built metadata against the PNG dimensions and verify every generated HTML route includes the shared tags.
 
-Visual browser validation remains outstanding in this environment: cloud browsing cannot reach the local preview and local Chromium previously failed on a blocked singleton socket. Do not describe the design as visually verified or claim live Clerk/provider flows were tested.
+Visual browser validation remains outstanding in this environment: the cloud browser blocks local file previews, cannot reach the local development server, and local Chromium previously failed on a blocked singleton socket. Do not describe the design as visually verified or claim live Clerk/provider flows were tested.

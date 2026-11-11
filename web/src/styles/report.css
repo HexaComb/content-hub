@@ -1,3 +1,4 @@
+@import "./metric-reading.css";
 .client-app .admin-welcome { margin: 36px auto; max-width: 620px; }
 .client-app .admin-welcome .small { color: var(--admin-muted); font-size: 12px !important; }
 :is(#dashboard, #report)[data-project-theme] { color-scheme: light; line-height: normal; }
@@ -28,8 +29,8 @@
   & .section-heading { margin-bottom: 18px; gap: 16px; }
   & .section-heading h2 { font-size: 18px; font-weight: 500; letter-spacing: -.3px; }
   & .section-heading p, & .section-heading > .muted { color: var(--muted); font-size: 12px; line-height: 1.6; }
-  & .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px; }
-  & .metric-card { min-width: 0; min-height: 216px; padding: 24px; background: #171a1d; border: 1px solid var(--line); border-radius: 8px; border-top: 2px solid #455b53; animation: none; }
+  & .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-bottom: 32px; }
+  & .metric-card { min-width: 0; min-height: 0; padding: 28px; background: #171a1d; border: 1px solid var(--line); border-radius: 8px;  animation: none; }
   & .metric-top h3 { font-size: 13px; line-height: 1.5; color: #c5cdd4; }
   & .metric-symbol { display: none; }
   & .metric-value { font-size: clamp(30px, 2.8vw, 42px); line-height: 1.15; font-weight: 600; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; margin: 20px 0 8px; }
@@ -99,7 +100,17 @@
     & .data-panel { padding: 22px 0 0; }
     & .data-panel > .section-heading { padding-inline: 22px; }
   }
-  @media (max-width: 420px) { & .metrics { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { & .metrics { grid-template-columns: 1fr; } }
 }
 /* Shared with custom themes without changing their type, palette or ordering. */
 [data-project-theme] .metric-baseline { color: var(--project-muted); font-size: 12px; line-height: 1.5; margin: 0 0 14px; }
+
+:is(#dashboard, #report) .report-heading { display: block; margin: 0 0 24px; }
+:is(#dashboard, #report) .report-heading h2 { font-size: 24px; margin-bottom: 8px; }
+:is(#dashboard, #report) .report-heading p { text-align: left; max-width: none; font-size: 14px; }
+:is(#dashboard, #report) .report-evidence { padding: 0; border-radius: 8px; }
+.report-evidence > summary { padding: 22px 24px; font-size: 14px; cursor: pointer; min-height: 48px; }
+.report-evidence > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.report-evidence-body > p { padding: 0 24px 20px; }
+.report-evidence tbody th { text-transform: none; background: transparent; letter-spacing: 0; vertical-align: top; font-weight: 600; }
+[data-project-theme] .metrics { align-items: stretch; }

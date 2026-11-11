@@ -56,7 +56,7 @@ try{
  assert.equal(await page.locator('#admin-link').isVisible(),false);
  assert.equal(await page.locator('.app-brand img').evaluate(el=>el.complete&&el.naturalWidth>0),true);
  assert.equal(await page.locator('.metric-card').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(23, 26, 29)');
- const pairs=await page.evaluate(()=>['.admin-heading p','.workspace-link.is-current','.metric-top h3','.metric-context','.quality-warning','.delta.improved','.delta.declined'].map(selector=>{
+ const pairs=await page.evaluate(()=>['.admin-heading p','.workspace-link.is-current','.mr-title','.mr-guidance','.mr-quality','.mr-positive','.mr-negative'].map(selector=>{
   const element=document.querySelector(selector);let parent=element;let background='';
   while(parent){background=getComputedStyle(parent).backgroundColor;if(background!=='rgba(0, 0, 0, 0)'&&background!=='transparent')break;parent=parent.parentElement;}
   return {selector,foreground:getComputedStyle(element).color,background};
