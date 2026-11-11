@@ -46,7 +46,7 @@ function createServer(db: D1Database, principal: Principal, env: Env) {
       return { isError: true, content: [{ type: "text" as const, text: error instanceof PublicError ? error.message : "Operation failed. Retry with the same idempotency key if this was a write." }] };
     }
   };
-  registerTool("list_clients", { description: "List clients explicitly granted to this credential (prototype limit: 100).", annotations: readOnly }, () => respond(() => repo.listClients()));
+  registerTool("list_clients", { description: "List authorized clients in ID order, up to 100 per page. Pass the last returned ID as afterId to continue until an empty page. Selected-client connections stay isolated; explicitly approved all-client connections include future clients in their own workspace only.", inputSchema:z.object({afterId:id.optional()}), annotations: readOnly }, ({afterId}) => respond(() => repo.listClients(afterId)));
   if (toolScopes.includes("invitations:manage")) {
     registerTool("prepare_invitation", { description: "Prepare a read-only invitation for one recipient and exact Instagram-account or project metric set. Returns a preview for explicit approval; does not email or grant access.", inputSchema: prepareInvitationInput, annotations: write }, v => respond(() => invite.prepareInvitation(v)));
     registerTool("list_invitations", { description: "Read invitation status for an authorized client. Never returns raw invitation/session tokens.", inputSchema: listInvitationsInput, annotations: readOnly }, v => respond(() => invite.listInvitations(v)));

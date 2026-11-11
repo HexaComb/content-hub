@@ -10,6 +10,7 @@ export interface ConsentProposal {
  accessTokenExpiresInSeconds?:number;
  refreshEnabled?:boolean;
  connectionMode?:'bounded'|'ongoing';
+ allClientsAllowed?:boolean;
  idleTimeoutSeconds?:number;
 }
 /** Fixed local pages only. OAuth parameters remain same-origin; no redirect_uri navigation here. */
@@ -30,6 +31,7 @@ export function safeSignInReturn(returnPath:string,origin:string):string {
 }
 const allowedScopes=new Set(['mcp:connect','clients:read','offline_access','themes:read','themes:write','presentations:read','presentations:write','presentations:publish','projects:read','projects:write','metrics:read','metrics:write','content:read','content:write','clients:write']);
 export function validProposal(value:ConsentProposal):boolean {
+ if(value?.allClientsAllowed!==undefined&&typeof value.allClientsAllowed!=='boolean')return false;
  if(value?.connectionMode!==undefined&&!['bounded','ongoing'].includes(value.connectionMode))return false;
  if(value?.connectionMode==='ongoing'&&(value.refreshEnabled!==true||value.idleTimeoutSeconds!==2592000||!Array.isArray(value.scopes)||!value.scopes.some(s=>s.id==='offline_access')))return false;
  return Boolean(value&&typeof value.handle==='string'&&value.handle&&typeof value.client?.name==='string'&&(typeof value.client.domain==='string'||value.client.domain===null)&&typeof value.client.redirectHost==='string'&&typeof value.client.isLoopback==='boolean'&&typeof value.tenant?.name==='string'&&typeof value.tenant.id==='string'&&Number.isFinite(Date.parse(value.expiresAt))&&Number.isFinite(Date.parse(value.consentExpiresAt))&&Array.isArray(value.scopes)&&value.scopes.every(s=>typeof s.id==='string'&&allowedScopes.has(s.id)&&typeof s.label==='string'&&typeof s.selected==='boolean')&&new Set(value.scopes.map(s=>s.id)).size===value.scopes.length&&Array.isArray(value.clients)&&value.clients.every(c=>typeof c.id==='string'&&typeof c.name==='string'&&typeof c.selected==='boolean')&&new Set(value.clients.map(c=>c.id)).size===value.clients.length);

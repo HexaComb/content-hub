@@ -1,7 +1,7 @@
 import {getClerk,mountSignIn} from './auth';
 import {api,message} from './api';
 import {sessionChangeGuard} from './access-state';
-type Connection={id:string;application:string;clientId:string;connectionMode:'bounded'|'ongoing';createdAt:string;expiresAt:string;revokedAt:string|null;cleanupPending:boolean;scopes:string[];clients:string[];authorizationActive:boolean};
+type Connection={clientAccessMode?:'selected'|'all';id:string;application:string;clientId:string;connectionMode:'bounded'|'ongoing';createdAt:string;expiresAt:string;revokedAt:string|null;cleanupPending:boolean;scopes:string[];clients:string[];authorizationActive:boolean};
 const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 let cursor:string|null=null;
 let epoch=0,alive=true,busy=false,dispose:(()=>void)|undefined,stop:(()=>void)|undefined;
@@ -10,7 +10,7 @@ function text(tag:string,value:string,className?:string){const node=document.cre
 function clear(){ $('connections-list').replaceChildren();cursor=null;$('connections-more').hidden=true;dispose?.();dispose=undefined;$('connections-login').hidden=true;$('connections-signout').hidden=true;$('connections-reload').hidden=true; }
 function render(connection:Connection,turn:number){
  const card=document.createElement('section');card.className='connection-card';card.append(text('h2',connection.application),text('p',connection.authorizationActive?'Authorized here; app connection not verified':connection.revokedAt?'Disconnected':'Expired or no longer authorized','connection-state'));
- card.append(text('p',`Application ID: ${connection.clientId}`),text('p',`Clients: ${connection.clients.length?connection.clients.join(', '):'No client data selected'}`),text('p',`Permissions: ${connection.scopes.join(', ')}`));
+ card.append(text('p',`Application ID: ${connection.clientId}`),text('p',`Clients: ${connection.clientAccessMode==='all'?'All current and future clients and projects in this workspace':connection.clients.length?connection.clients.join(', '):'No client data selected'}`),text('p',`Permissions: ${connection.scopes.join(', ')}`));
  const expiry=new Date(connection.expiresAt).toLocaleString();
  card.append(text('p',connection.connectionMode==='ongoing'?`Ongoing connection with rotating refresh. Disconnect any time. Inactivity deadline: ${expiry}; each successful refresh moves it 30 days ahead.`:`Fixed access expiry: ${expiry}. This connection is not silently extended.`));
  if(!connection.revokedAt||connection.cleanupPending){

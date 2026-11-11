@@ -61,3 +61,13 @@ test('connected apps sign-in return permits only the fixed local route',()=>{
  assert.equal(safeSignInReturn('/connections/',origin),origin+'/connections');
  for(const path of ['/connections?redirect=https://attacker.invalid','/connections#id','//attacker.invalid/connections','/connections/other'])assert.throws(()=>safeSignInReturn(path,origin));
 });
+
+test('all-client eligibility is explicit and consent boundary starts unchecked',async()=>{
+ assert.equal(validProposal({...proposal,allClientsAllowed:true}),true);
+ assert.equal(validProposal({...proposal,allClientsAllowed:'true'} as unknown as ConsentProposal),false);
+ const ui=await readFile(new URL('../src/scripts/authorize.ts',import.meta.url),'utf8');
+ assert.match(ui,/if\(value.allClientsAllowed\)choice\(\$\('consent-clients'\),'all','All current and future clients in this workspace',false,'boundary'/);
+ assert.match(ui,/clientAccessMode==='selected'\?checked\('client'\):\[\]/);
+ assert.match(ui,/clientAccessMode==='all'&&!current.allClientsAllowed/);
+ assert.match(ui,/clientIds,clientAccessMode,connectionMode/);
+});
