@@ -10,7 +10,7 @@ test('plugin routes are exact, encoded and never treat a tenant URL as admin aut
  for(const value of ['?plugin=','?plugin=other','?plugin=seo&plugin=instagram','?plugin=SEO'])assert.equal(readPluginKey(value),'invalid');
 });
 test('metric suggestions use explicit category prefixes, not labels or invented data',()=>{
- const metrics=[{id:'seo',key:'openseo.visibility'},{id:'ig',key:'instagram_reach'},{id:'organic',key:'ga4_organic_sessions'},{id:'ambiguous',key:'reach'}];
+ const metrics=[{id:'seo',key:'openseo.visibility'},{id:'ig',key:'instagram_followers'},{id:'organic',key:'ga4_organic_sessions'},{id:'ambiguous',key:'reach'}];
  assert.deepEqual(suggestedMetricIds('seo',metrics),['seo','organic']);assert.deepEqual(suggestedMetricIds('instagram',metrics),['ig']);
 });
 

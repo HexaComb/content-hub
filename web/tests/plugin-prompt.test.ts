@@ -15,7 +15,7 @@ test('current month uses client timezone across date/year boundaries and never g
 
 test('each prompt is scoped, source-specific, credential-free and protects history',()=>{
  const target:Target={tenantId:'tenant-a',clientId:'client-a',projectId:'project-a',name:'Ignored untrusted project name',kind:'one_off_project',status:'active',timezone:'America/Los_Angeles'};
- const metrics=[{id:'search',key:'gsc_clicks',unit:'clicks',current:{value:923454}},{id:'social',key:'instagram_reach',unit:'accounts',current:{value:923455}},{id:'other',key:'custom_count',unit:'count'}] as Metric[];
+ const metrics=[{id:'search',key:'gsc_clicks',unit:'clicks',current:{value:923454}},{id:'social',key:'instagram_followers',unit:'accounts',current:{value:923455}},{id:'other',key:'custom_count',unit:'count'}] as Metric[];
  for(const key of ['seo','instagram'] as const){
   const prompt=buildMonthlyMetricsPrompt(target,key,{key,enabled:true,revision:1,metricIds:['search','social']},metrics,new Date('2026-11-11T04:30:00Z'));
   assert.ok(prompt.includes(metricsMcpEndpoint));
@@ -31,6 +31,7 @@ test('each prompt is scoped, source-specific, credential-free and protects histo
   assert.ok(!prompt.includes('"metricId":"other"'));
   assert.ok(!prompt.includes('923454'));assert.ok(!prompt.includes('923455'));assert.ok(!prompt.includes(target.name));
   assert.ok(prompt.includes(key==='seo'?'Google Search Console':'Instagram/Meta insights'));
+  if(key==='instagram'){assert.ok(prompt.includes('four kinds'));assert.ok(prompt.includes('genuine daily snapshots'));assert.ok(prompt.includes('last six calendar months'));}
   assert.ok(prompt.includes('no content was published and no access was changed'));
  }
 });
@@ -40,5 +41,5 @@ test('missing timezone and empty mappings explicitly stop rather than assume acc
  assert.ok(prompt.includes('Do not guess a timezone'));
  assert.ok(prompt.includes('An empty selection means stop'));
  assert.ok(!prompt.includes('tenantId'));
- assert.ok(!prompt.includes('periodStart='));
+ assert.ok(!/periodStart=\d{4}-/.test(prompt));
 });

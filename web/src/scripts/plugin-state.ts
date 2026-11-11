@@ -1,3 +1,4 @@
+import {instagramMetricKind} from '../../../src/instagramSchema.ts';
 import type {ProjectRoute} from './project-state';
 import {knownMetricPlugin,metricAllowedForPlugin} from '../../../src/pluginMetrics.ts';
 export {metricAllowedForPlugin};
@@ -21,7 +22,7 @@ export function pluginApiPath(target:ProjectRoute,admin:boolean):string {
 }
 export function suggestedMetricIds(key:PluginKey,metrics:{id:string;key:string}[]):string[] {
  // Suggestions are reviewed in the form. They never alter stored associations by themselves.
- return metrics.filter(metric=>knownMetricPlugin(metric.key)===key).map(metric=>metric.id);
+ return metrics.filter(metric=>knownMetricPlugin(metric.key)===key&&(key!=='instagram'||instagramMetricKind(metric.key)!==null)).map(metric=>metric.id);
 }
 
 /** A project home is a chooser, never an implicit combined report. */

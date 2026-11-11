@@ -153,6 +153,26 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
     assert.equal(decode(await call("revoke_invitation",{clientId:"client",invitationId:prepared.invitationId},tokenB)).revoked,false);
     assert.equal(decode(await call("revoke_invitation",{clientId:"client",invitationId:prepared.invitationId})).revoked,true);
   });
+  await t.test("Instagram MCP workflow exposes scoped tools and never publishes content", async () => {
+    const target={clientId:'client',projectId:'instagram-ui'};
+    decode(await call('create_project',{...target,kind:'one_off_project',name:'Synthetic Instagram UI',description:'',status:'active',metricIds:[],expectedRevision:0,idempotencyKey:'instagram-create-project'}));
+    decode(await call('set_project_plugin',{...target,key:'instagram',enabled:true,metricIds:[],expectedRevision:0,idempotencyKey:'instagram-enable-plugin'}));
+    const packet=decode(await call('get_instagram_dashboard',{...target,month:'2026-10'}));
+    assert.equal(packet.kpis.length,4);assert.ok(packet.kpis.every((k:any)=>k.value===null));
+    assert.equal(packet.workflowAvailable,false);
+    const idea={...target,id:'intro',format:'reel',title:'Synthetic idea',idea:'Synthetic test only',platform:'instagram',status:'proposed',expectedRevision:0,idempotencyKey:'instagram-create-idea'};
+    assert.equal(decode(await call('upsert_instagram_item',idea)).revision,1);
+    assert.equal(decode(await call('get_instagram_workflow',target)).ideas.length,1);
+    const answer={...target,id:'intro',answer:'yes',expectedRevision:1,idempotencyKey:'instagram-answer-yes'};
+    assert.equal(decode(await call('record_instagram_decision',answer)).status,'queued');
+    assert.equal(decode(await call('record_instagram_decision',answer)).replayed,true);
+    const workflow=decode(await call('get_instagram_workflow',target));
+    assert.equal(workflow.pending.length,1);assert.equal(workflow.answers.length,1);assert.equal(workflow.answers[0].answer,'yes');
+    assert.equal(workflow.executed.length,0);
+    assert.equal((await call('get_instagram_workflow',target,tokenB)).isError,true);
+    for(const path of ['/api/admin/targets/a/client/instagram-ui/plugins/instagram/dashboard','/api/targets/client/instagram-ui/plugins/instagram/dashboard'])assert.equal((await mf.dispatchFetch('https://example.test'+path)).status,401);
+    assert.equal((await mf.dispatchFetch('https://example.test/api/admin/targets/a/client/instagram-ui/plugins/instagram/ideas/intro/decision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(answer)})).status,401);
+  });
   await t.test("expired and revoked credentials are rejected", async () => {
     await db.prepare("UPDATE principals SET revoked_at=? WHERE tenant_id=?").bind(new Date().toISOString(), "b").run();
     assert.equal((await mf.dispatchFetch("https://example.test/mcp", { headers: { Authorization: `Bearer ${tokenB}` } })).status, 401);

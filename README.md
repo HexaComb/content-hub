@@ -89,6 +89,10 @@ A new installation starts with an empty database. `/` is the private portal sign
 | `define_metric` | Add a named numeric metric with stable meaning | `metrics:write` |
 | `get_observation` | Read current value/revision for an exact interval | `metrics:read` |
 | `record_observation` | Add or correct a dated number with provenance | `metrics:write` |
+| `get_instagram_dashboard` | Read four selected Instagram KPI kinds and daily follower history | `metrics:read` |
+| `get_instagram_workflow` | Read project ideas, pending/completed content and decisions | `content:read` |
+| `upsert_instagram_item` | Create or revision-update an idea/production record | `content:write` |
+| `record_instagram_decision` | Record an explicitly authorized Yes/No, without publishing | `content:write` |
 | `compare_month` | Compare supplied monthly observations | `metrics:read` |
 | `list_content` | Inspect planned/published content | `content:read` |
 | `get_content` | Retrieve caption, assets and schedule details | `content:read` |
@@ -102,6 +106,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 - [Client project pages and browser invitation administration](docs/client-project-pages.md)
 
 - [Private standalone client microsites](docs/presentations.md)
+- [Instagram dashboard and idea workflow](docs/instagram-dashboard.md)
 - [Project/account presentation through MCP](docs/themes.md)
 - [Architecture and product plan](docs/architecture.md)
 - [Metric semantics and reporting](docs/metrics.md)

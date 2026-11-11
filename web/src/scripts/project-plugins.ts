@@ -1,3 +1,4 @@
+import {instagramMetricKind} from '../../../src/instagramSchema.ts';
 import {api,post,message} from './api';
 import {createModal} from './modal';
 import {pluginCatalog,pluginApiPath,pluginPagePath,suggestedMetricIds,metricAllowedForPlugin,type PluginKey,type ProjectPlugin} from './plugin-state';
@@ -18,14 +19,15 @@ export function mountProjectPlugins(target:ProjectRoute,admin:boolean,selected:P
   if(!current()||!canManage)return;
   dialog?.dispose();let alive=true;
   const modal=createModal({title:`${configuration(key)?.enabled?'Configure':'Add'} ${pluginCatalog[key].name}`,trigger,onClose:()=>{alive=false;}});dialog=modal;
-  const config=configuration(key),eligibleMetrics=metrics.filter(metric=>metricAllowedForPlugin(key,metric)),chosen=new Set(config?.metricIds??suggestedMetricIds(key,metrics));
+  const config=configuration(key),eligibleMetrics=metrics.filter(metric=>metricAllowedForPlugin(key,metric)&&(key!=='instagram'||instagramMetricKind(metric.key)!==null)),chosen=new Set(config?.metricIds??suggestedMetricIds(key,metrics));
   const intro=el('p',key==='seo'?'Choose which project metrics appear in the SEO dashboard. Values continue to be updated through MCP.':'Add a dedicated dashboard for stored Instagram content and performance. This does not connect a Meta account or turn on posting.','plugin-notice');
   const form=el('form',undefined,'plugin-dialog-form');const notice=el('p','', 'plugin-notice');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
   const enabled=el('input');enabled.type='checkbox';enabled.checked=true;const enabledLabel=el('label',undefined,'plugin-enabled');enabledLabel.append(enabled,document.createTextNode('Show this plugin in the project'));
   const fields=el('fieldset');fields.append(el('legend','Metrics in this dashboard'));
+  if(key==='instagram')fields.append(el('p','Instagram shows only Followers, Posts since month start, Average likes per post, and Posts per week. Daily follower observations supply the history chart.','plugin-notice'));
   if(!eligibleMetrics.length)fields.append(el('p',`No ${pluginCatalog[key].name} metrics are linked to this project yet. You can add this dashboard now; its metrics stay empty until matching metrics are added through MCP.`,'plugin-notice'));
-  const incompatible=config?.metricIds.filter(id=>metrics.some(metric=>metric.id===id&&!metricAllowedForPlugin(key,metric))).length??0;
-  if(incompatible)fields.append(el('p',`${incompatible} saved metric selection${incompatible===1?' belongs':'s belong'} to a different plugin and ${incompatible===1?'is':'are'} excluded from this dashboard. Saving removes those selections, not the underlying metrics or readings.`,'plugin-notice'));
+  const incompatible=config?.metricIds.filter(id=>metrics.some(metric=>metric.id===id&&(!metricAllowedForPlugin(key,metric)||(key==='instagram'&&instagramMetricKind(metric.key)===null)))).length??0;
+  if(incompatible)fields.append(el('p',`${incompatible} saved metric selection${incompatible===1?' is':'s are'} not supported by this dashboard and will not be shown. Saving removes those selections, not the underlying metrics or readings.`,'plugin-notice'));
   for(const metric of eligibleMetrics){const label=el('label');const check=el('input');check.type='checkbox';check.name='metric';check.value=metric.id;check.checked=chosen.has(metric.id);const text=el('span',`${metric.label} (${metric.unit})`);label.append(check,text);fields.append(label);}
   const help=el('p','Only compatible project metrics can be selected. SEO and Instagram metrics stay in their own dashboards. Client viewers still see only the metrics already shared with them. Hiding a plugin keeps its settings and all stored data.','plugin-notice');
   const actions=el('div',undefined,'plugin-actions');const save=el('button',config?.enabled?'Save settings':`Add ${pluginCatalog[key].name}`,'admin-button');save.type='submit';const cancel=button('Cancel',()=>modal.close());actions.append(save,cancel);form.append(enabledLabel,fields,help,notice,actions);modal.content.append(intro,form);modal.open();
