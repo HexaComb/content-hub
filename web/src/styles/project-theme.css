@@ -1,0 +1,62 @@
+/* The project is a bounded canvas. Authentication, navigation, permission cues
+   and administrator controls are deliberately outside this styling boundary. */
+[data-project-theme]{display:flex;flex-direction:column;gap:0;background:var(--project-background);color:var(--project-text);font-family:var(--project-body);padding:clamp(18px,3vw,44px);border:1px solid var(--project-border);border-radius:var(--project-radius);overflow-wrap:anywhere;isolation:isolate}
+[data-project-theme][data-project-width=standard]{max-width:1020px;margin-inline:auto}
+[data-project-theme] .toolbar{order:0;background:var(--project-raised);border-color:var(--project-border);border-radius:var(--project-radius);color:var(--project-text)}
+[data-project-theme] .toolbar label,[data-project-theme] .toolbar p{color:var(--project-muted)}
+[data-project-theme] input,[data-project-theme] select,[data-project-theme] .month-input button{background:var(--project-raised);border-color:var(--project-border);color:var(--project-text)}
+[data-project-theme] input:focus-visible,[data-project-theme] select:focus-visible,[data-project-theme] button:focus-visible,[data-project-theme] [tabindex]:focus-visible{outline-color:var(--project-accent)}
+[data-project-theme] .month-control{border-color:var(--project-border)}
+[data-project-theme] .target-heading{order:1;align-items:center;gap:24px;padding:38px 0;margin:0}
+[data-project-theme] .target-heading h2{font-family:var(--project-heading);font-size:clamp(26px,3.8vw,54px);letter-spacing:-.03em;line-height:1.1;font-weight:700;max-width:20ch;margin-bottom:13px}
+[data-project-theme] .target-heading p{font-size:13px;line-height:1.65;color:var(--project-muted)}
+[data-project-theme] #theme-eyebrow{font-size:10px;letter-spacing:.18em;font-weight:700;color:var(--project-accent);margin-bottom:18px}
+[data-project-theme] #theme-tagline{font-size:15px;max-width:46ch;margin:16px 0 0}
+[data-project-theme] .target-avatar{background:var(--project-raised);border-color:var(--project-border);color:var(--project-accent);width:64px;height:64px;flex-shrink:0;border-radius:var(--project-radius)}
+#theme-logo{width:clamp(70px,13vw,150px);height:clamp(70px,13vw,150px);object-fit:contain;flex-shrink:0}
+[data-project-logo] .target-avatar{display:none}
+[data-project-theme] .quiet-pill{color:var(--project-muted);border-color:var(--project-border)}
+[data-project-theme][data-project-hero=compact] .target-heading{padding:28px 0}
+[data-project-theme][data-project-hero=compact] .target-heading h2{font-size:clamp(22px,3vw,34px)}
+[data-project-theme][data-project-hero=editorial] .target-heading{padding:48px 0 40px;align-items:flex-start}
+[data-project-theme][data-project-hero=banner] .target-heading{background:var(--project-surface);margin-top:24px;padding:40px 28px;border-radius:var(--project-radius)}
+[data-project-theme][data-project-heading=display] .target-heading h2,[data-project-theme][data-project-heading=display] .section-heading h2{text-transform:uppercase;letter-spacing:.015em}
+.theme-divider{display:none}
+[data-project-theme] .theme-divider{order:2;display:block;margin:0 0 30px;height:1px;background:var(--project-border);flex-shrink:0}
+[data-project-theme][data-project-hero=banner] .theme-divider{margin-top:24px}
+[data-project-theme][data-project-divider=none] .theme-divider{display:none}
+[data-project-theme][data-project-divider=stripes] .theme-divider{height:14px;background:repeating-linear-gradient(90deg,var(--project-accent) 0 26px,var(--project-text) 26px 52px)}
+[data-project-theme][data-project-divider=checker] .theme-divider{height:24px;background:conic-gradient(var(--project-accent) 25%,var(--project-text) 0 50%,var(--project-accent) 0 75%,var(--project-text) 0);background-size:24px 24px}
+[data-project-theme]>.section-heading{order:3}
+[data-project-theme] .section-heading h2,[data-project-theme] .comparison-panel>h2{font-family:var(--project-heading);color:var(--project-text);font-size:clamp(18px,2vw,25px);font-weight:700}
+[data-project-theme] .section-heading p,[data-project-theme] .muted,[data-project-theme] .section-heading>.muted{color:var(--project-muted)}
+[data-project-theme] .metrics{order:4;grid-template-columns:repeat(var(--project-columns),minmax(0,1fr));gap:var(--project-gap);margin-bottom:30px}
+[data-project-theme] .metric-card,[data-project-theme] .panel{background:var(--project-surface);border:1px solid var(--project-border);border-radius:var(--project-radius);padding:var(--project-pad)}
+[data-project-theme][data-project-cards=solid] .metric-card{background:var(--project-raised);border-color:var(--project-raised)}
+[data-project-theme][data-project-cards=accent] .metric-card{border-top:4px solid var(--project-accent)}
+[data-project-theme] .metric-top h3{font-size:12px;color:var(--project-muted);line-height:1.5}
+[data-project-theme] .metric-symbol{color:var(--project-accent)}
+[data-project-theme] .metric-value{color:var(--project-accent);font-family:var(--project-heading);font-size:clamp(30px,3.2vw,48px);font-weight:700;line-height:1.2;letter-spacing:-.02em;margin:20px 0 16px}
+[data-project-theme] .metric-context{color:var(--project-muted);font-size:10px}
+[data-project-theme] .quality-warning{color:#795318;background:#fff1cf;border-radius:4px;padding:5px 7px;width:fit-content}
+[data-project-theme] .detail-grid,[data-project-theme]>.comparison-panel{order:5;margin-bottom:30px}
+[data-project-theme]>.data-panel{order:6}
+[data-project-theme] .context-panel{background:var(--project-raised)}
+[data-project-theme] .context-panel h2{font-family:var(--project-heading);color:var(--project-text)}
+[data-project-theme] .context-panel p,[data-project-theme] .context-panel .eyebrow{color:var(--project-muted)}
+[data-project-theme] .context-rule{border-color:var(--project-border)}
+[data-project-theme] .bar-track{background:var(--project-raised)}
+[data-project-theme] .bar.current,[data-project-theme] .current-dot{background:var(--project-accent)}
+[data-project-theme] .bar.previous,[data-project-theme] .previous-dot{background:repeating-linear-gradient(135deg,var(--project-muted) 0 5px,var(--project-surface) 5px 7px)}
+[data-project-theme] .bar-line>span,[data-project-theme] .legend{color:var(--project-muted)}
+[data-project-theme] .legend,[data-project-theme] td{border-color:var(--project-border)}
+[data-project-theme] th{background:var(--project-raised);color:var(--project-muted)}
+[data-project-theme] td:last-child{color:var(--project-muted)}
+[data-project-theme] .notice{background:var(--project-raised);border-color:var(--project-border);color:var(--project-text)}
+[data-project-theme][data-project-order=comparison-first] .detail-grid,[data-project-theme][data-project-order=comparison-first]>.comparison-panel{order:3}
+[data-project-theme][data-project-order=comparison-first]>.section-heading{order:4}
+[data-project-theme][data-project-order=comparison-first] .metrics{order:5}
+[data-project-theme] #report-status{order:2;color:var(--project-muted)}
+@media(max-width:1150px){[data-project-theme] .toolbar{flex-direction:column;align-items:stretch}[data-project-theme] .target-control{min-width:0;max-width:100%}[data-project-theme] .month-control{border-top:1px solid var(--project-border);padding-top:15px}[data-project-theme] .month-input{justify-content:space-between}[data-project-theme] .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}[data-project-theme] .target-heading{gap:18px}[data-project-theme] .target-heading .quiet-pill{align-self:flex-start}}
+@media(max-width:700px){[data-project-theme]{padding:18px 14px}[data-project-theme] .toolbar{padding:16px}[data-project-theme] .target-heading,[data-project-theme][data-project-hero=banner] .target-heading{padding:28px 16px;flex-wrap:wrap;gap:16px}[data-project-theme] .target-heading>div:not(.target-avatar){flex:1;min-width:160px}[data-project-theme] .target-heading h2{font-size:29px}[data-project-theme] #theme-tagline{font-size:13px}[data-project-theme] .target-heading .quiet-pill{margin-left:0}[data-project-theme] .metrics{gap:12px}[data-project-theme] .metric-card{padding:18px 14px}[data-project-theme] .metric-value{font-size:31px}[data-project-theme] .panel{padding:20px 15px}[data-project-theme] .section-heading{flex-wrap:wrap}[data-project-theme] .section-heading p{max-width:none;text-align:left}[data-project-theme] .section-heading h2{font-size:20px}[data-project-theme] .data-panel{padding:18px 10px}}
+@media(max-width:380px){[data-project-theme] .metrics{grid-template-columns:1fr}[data-project-theme] .metric-card{min-height:0}}

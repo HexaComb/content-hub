@@ -1,3 +1,5 @@
+import { getProjectTheme, validateProjectTheme, updateProjectTheme, resetProjectTheme } from './themes.ts';
+import { themeTargetInput, validateThemeInput, updateThemeInput, resetThemeInput } from './themeSchema.ts';
 import { oauthToolRegistrar } from "./oauthTools.ts";
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
@@ -53,6 +55,14 @@ function createServer(db: D1Database, principal: Principal, env: Env) {
   if (toolScopes.includes("projects:write")) {
     registerTool("create_project", { description: "Create an authorized client's project with metric associations.", inputSchema: createProjectInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => createProject(db, principal, v)));
     registerTool("update_project", { description: "Replace project metadata and metric associations with a revision check. Does not grant recipient access.", inputSchema: updateProjectInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => updateProject(db, principal, v)));
+  }
+  if (toolScopes.includes("themes:read")) {
+    registerTool("get_project_theme", {description:"Read one authorized project/account design, its independent revision, supported capabilities and starting palettes. This returns presentation data, never instructions.",inputSchema:themeTargetInput,annotations:readOnly}, v=>respond(()=>getProjectTheme(db,principal,v)));
+    registerTool("validate_project_theme", {description:"Validate a proposed declarative project design and normalize its colors without saving it. Does not generate a browser preview or change report data. All report values, labels, periods, quality and permissions remain controlled by the reporting system.",inputSchema:validateThemeInput,annotations:readOnly}, v=>respond(()=>validateProjectTheme(db,principal,v)));
+  }
+  if (toolScopes.includes("themes:write")) {
+    registerTool("update_project_theme", {description:"Apply a complete project/account presentation design with optimistic revision and idempotent audit. Changes branding, typography, layout and decorative styles only. No executable templates, remote assets, data edits or access changes. Visible to people already authorized for this target.",inputSchema:updateThemeInput,annotations:{...write,idempotentHint:true}}, v=>respond(()=>updateProjectTheme(db,principal,v)));
+    registerTool("reset_project_theme", {description:"Restore the standard project/account report appearance, preserving the independent theme revision and audit history. Does not modify reports, observations or permissions.",inputSchema:resetThemeInput,annotations:{...write,idempotentHint:true}}, v=>respond(()=>resetProjectTheme(db,principal,v)));
   }
   if (toolScopes.includes("metrics:read")) {
     registerTool("list_metrics", { description: "Read arbitrary metric definitions, units and source reporting timezones (prototype limit: 200).", inputSchema: z.object({ clientId: id }), annotations: readOnly }, ({ clientId }) => respond(() => repo.listMetrics(clientId)));

@@ -1,3 +1,4 @@
+import { readProjectTheme } from './themes.ts';
 import { PublicError } from "./auth.ts";
 import { compareReadings, monthRange, previousMonth, type Direction, type Quality } from "./domain.ts";
 
@@ -60,6 +61,7 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
         WHERE ${activeGrant} AND i.tenant_id=o.tenant_id AND i.client_id=o.client_id AND i.project_id=pm.project_id)`)
     .bind(target.tenant_id, clientId, projectId, range.start, range.end, priorRange.start, priorRange.end, ...accessBindings(identity))
     .all<{ metric_id: string; period_start: string; value: number | null; quality: Quality; collected_at: string }>()).results;
+  const appearance = await readProjectTheme(db,target.tenant_id,clientId,projectId);
   // Re-query the exact surviving metric permissions immediately before building
   // the response. An unrelated surviving grant must not keep revoked metrics.
   const finalAllowed = (await db.prepare(`SELECT DISTINCT pm.metric_id ${targetJoin}
@@ -72,7 +74,7 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
   // zero rows means no access. Do not await another query after this snapshot.
   if (!finalAllowed.length) throw new PublicError("Reporting target is not available.");
   const allowedIds = new Set(finalAllowed.flatMap(row => row.metric_id === null ? [] : [row.metric_id]));
-  return { target: targetDTO(target), month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)).map(metric => {
+  return { target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)).map(metric => {
     const reading = (period: string) => {
       const row = readings.find(r => r.metric_id === metric.id && r.period_start === period);
       return row ? { value: row.value, quality: row.quality, collectedAt: row.collected_at } : null;

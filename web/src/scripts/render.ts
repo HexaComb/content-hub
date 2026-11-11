@@ -1,3 +1,4 @@
+import { applyProjectTheme } from './theme.ts';
 import type {Metric,Reading,Report} from './types';
 const number=new Intl.NumberFormat('en',{maximumFractionDigits:2});
 export const monthLabel=(m:string)=>new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en',{month:'long',year:'numeric',timeZone:'UTC'});
@@ -8,6 +9,7 @@ function el(tag:string,text?:string,cls?:string) {const e=document.createElement
 function relative(m:Metric) {return m.relativePercent===null ? m.reason==='zero_baseline'?'Relative change unavailable: zero baseline':'Complete readings needed for comparison':`${signed(m.relativePercent)}% relative to previous month`;}
 function quality(r:Reading|null) {if(!r)return 'Missing';return `${r.quality}${r.provider?` · ${r.provider}`:''}${r.collectedAt?` · Collected ${new Date(r.collectedAt).toLocaleDateString('en',{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'})}`:''}`;}
 export function renderReport(report:Report) {
+ applyProjectTheme(document.querySelector<HTMLElement>('#dashboard')??document.querySelector<HTMLElement>('#report'),report.appearance);
  const cards=document.querySelector('#metrics')!;const rows=document.querySelector('#metric-rows')!;const chart=document.querySelector('#comparison-chart')!;cards.replaceChildren();rows.replaceChildren();chart.replaceChildren();
  document.querySelector('#comparison-label')!.textContent=`${monthLabel(report.month)} vs ${monthLabel(report.previousMonth)}`;
  for(const m of report.metrics){

@@ -1,3 +1,4 @@
+import { readProjectTheme } from './themes.ts';
 import { PublicError } from './auth.ts';
 import { requireSuperAdmin } from './admin.ts';
 import type { HumanIdentity } from './humanAuth.ts';
@@ -32,7 +33,8 @@ export async function adminReport(db:D1Database,identity:HumanIdentity|null,env:
  // Explicit report columns only: no invitation tokens, credentials, private notes,
  // source payloads, operator mappings or unrelated client observations are loaded.
  const readings=(await db.prepare(`SELECT o.metric_id,o.period_start,o.value,o.quality,o.collected_at FROM observations o JOIN project_metrics pm ON pm.tenant_id=o.tenant_id AND pm.client_id=o.client_id AND pm.metric_id=o.metric_id WHERE o.tenant_id=? AND o.client_id=? AND pm.project_id=? AND ((o.period_start=? AND o.period_end=?) OR (o.period_start=? AND o.period_end=?)) AND o.revision=(SELECT MAX(r.revision) FROM observations r WHERE r.tenant_id=o.tenant_id AND r.client_id=o.client_id AND r.metric_id=o.metric_id AND r.period_start=o.period_start AND r.period_end=o.period_end)`).bind(tenantId,clientId,projectId,range.start,range.end,priorRange.start,priorRange.end).all<{metric_id:string;period_start:string;value:number|null;quality:Quality;collected_at:string}>()).results;
- return {target:targetDTO(target),month,previousMonth:priorMonth,metrics:definitions.map(metric=>{
+ const appearance=await readProjectTheme(db,tenantId,clientId,projectId);
+ return {target:targetDTO(target),appearance,month,previousMonth:priorMonth,metrics:definitions.map(metric=>{
   const reading=(period:string)=>{const row=readings.find(r=>r.metric_id===metric.id&&r.period_start===period);return row?{value:row.value,quality:row.quality,collectedAt:row.collected_at}:null;};
   return {...metric,...compareReadings(reading(range.start),reading(priorRange.start),metric.direction,metric.unit)};
  })};

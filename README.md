@@ -9,6 +9,7 @@ An agency workspace for storing client metrics, comparing reporting periods, and
 - Static Astro client portal, target/month selection, private metric comparisons.
 - Target-scoped invitations, Clerk-verified recipient identity and Resend transport (disabled until configured).
 - Fail-closed super-admin eligibility for the two explicitly named operators only, requiring verified sessions and separate enablement. No public admin signup or promotion.
+- Per-project/account MCP design documents with isolated styling, accessible palettes and audited reset. Report data and permissions remain unchanged.
 - Arbitrary metric definitions and numeric observations. Instagram and SEO are categories, not hardcoded tables.
 - Source attribution, collection timestamps, missing/partial data, idempotent ingestion and append-only corrections.
 - Month-over-month comparisons using exact supplied monthly periods.
@@ -46,6 +47,8 @@ The database starts empty. `/` is the private portal sign-in, `/invite` accepts 
 | `send_invitation` | Send only an explicitly approved invitation | `invitations:send` |
 | `create_client` / `update_client` | Create or revise a client with an audit receipt | `clients:write` |
 | `create_project` / `update_project` | Create or revise an Instagram-account/one-off-project target | `projects:write` |
+| `get_project_theme` / `validate_project_theme` | Read a target design or validate a proposed design without saving | `themes:read` |
+| `update_project_theme` / `reset_project_theme` | Apply or reset a target design independently of report data | `themes:write` |
 | `list_projects` | Read project targets and metric associations | `projects:read` |
 | `create_content` / `update_content` | Draft/edit content, invalidating previous approval | `content:write` |
 | `link_content_metric` | Associate content with a metric | `content:write` |
@@ -65,6 +68,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 
 ## Design documents
 
+- [Project/account presentation through MCP](docs/themes.md)
 - [Architecture and product plan](docs/architecture.md)
 - [Metric semantics and reporting](docs/metrics.md)
 - [Content lifecycle and safe agent coordination](docs/content.md)

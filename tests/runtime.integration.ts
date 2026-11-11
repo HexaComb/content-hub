@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { Miniflare } from "miniflare";
+import { themePresets } from "../src/themeSchema.ts";
 import { sha256 } from "../src/domain.ts";
 
 test("Worker MCP, D1 ingestion and client isolation", async t => {
@@ -23,7 +24,7 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
   for (const [tenant, token] of [["a", tokenA], ["b", tokenB]]) {
     await db.prepare("INSERT INTO tenants VALUES (?,?)").bind(tenant, "Synthetic agency").run();
     await db.prepare("INSERT INTO clients VALUES (?,?,?,?)").bind(tenant, "client", "Synthetic client", "UTC").run();
-    await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,revoked_at,scopes_json) VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt","invitations:manage","invitations:send"]').run();
+    await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,revoked_at,scopes_json) VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["themes:read","themes:write","metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt","invitations:manage","invitations:send"]').run();
     await db.prepare("INSERT INTO client_grants VALUES (?,?,?)").bind(tenant, "agent", "client").run();
   }
   const call = async (name: string, args: Record<string, unknown>, token = tokenA) => {
@@ -88,6 +89,23 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
     const list = decode(await call("list_content", { clientId: "client", status: "scheduled", limit: 1 }));
     assert.equal(list.items.length, 1); assert.equal(list.nextCursor, null);
     assert.equal((await db.prepare("SELECT status FROM content_items WHERE id='demo-post'").first<{ status: string }>())?.status, "scheduled");
+  });
+  await t.test("MCP theme tools use separate scopes, preserve data and reset safely", async () => {
+    decode(await call("create_project", {clientId:"client",projectId:"themed",kind:"one_off_project",name:"Synthetic themed target",description:"",status:"active",metricIds:[metric.id],expectedRevision:0,idempotencyKey:"theme-project-create"}));
+    const target={clientId:"client",projectId:"themed"};
+    const before=decode(await call("compare_month",{clientId:"client",month:"2026-10"}));
+    assert.equal(decode(await call("get_project_theme",target)).revision,0);
+    assert.equal(decode(await call("validate_project_theme",{...target,theme:themePresets.night})).persisted,false);
+    const update={...target,theme:themePresets.night,expectedRevision:0,idempotencyKey:"theme-mcp-write"};
+    assert.equal(decode(await call("update_project_theme",update)).revision,1);
+    assert.equal(decode(await call("update_project_theme",update)).replayed,true);
+    assert.equal(decode(await call("get_project_theme",target)).theme.name,"After hours");
+    assert.equal((await call("get_project_theme",target,tokenB)).isError,true);
+    assert.deepEqual(decode(await call("compare_month",{clientId:"client",month:"2026-10"})),before);
+    assert.equal(decode(await call("reset_project_theme",{...target,expectedRevision:1,idempotencyKey:"theme-mcp-reset"})).revision,2);
+    assert.equal(decode(await call("get_project_theme",target)).theme,null);
+    assert.equal((await call("update_project_theme",{...update,idempotencyKey:"theme-stale-write"})).isError,true);
+    assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM theme_events").first<{n:number}>())?.n,2);
   });
   await t.test("explicit client grants are required inside a tenant", async () => {
     await db.prepare("INSERT INTO clients VALUES ('a','ungranted','Synthetic ungranted client','UTC')").run();

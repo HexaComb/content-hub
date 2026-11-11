@@ -14,3 +14,6 @@ web/.astro/
 __pycache__/
 .DS_Store
 
+
+web/tests/.theme-qa/
+web/tests/artifacts/

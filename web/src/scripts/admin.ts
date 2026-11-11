@@ -1,3 +1,4 @@
+import { clearProjectTheme } from './theme';
 import {getClerk,mountSignIn} from './auth';
 import {api,ApiError,message} from './api';
 import {sessionChangeGuard} from './access-state';
@@ -8,10 +9,10 @@ const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(
 const month=$<HTMLInputElement>('month');month.value=new Date().toISOString().slice(0,7);
 let epoch=0,reportEpoch=0,stopAuth:(()=>void)|undefined,unmount:(()=>void)|undefined,signingOut=false,nextOffset:number|null=null,selected:AdminTarget|undefined;
 function status(text:string){$('status').textContent=text;$('status').hidden=!text;}
-function clearReport(){reportEpoch++;$('report').hidden=true;for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
+function clearReport(){clearProjectTheme($('report'));reportEpoch++;$('report').hidden=true;for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
 function clear(){clearReport();$('admin-workspace').hidden=true;$('welcome').hidden=true;$('project-rows').replaceChildren();$('summary').textContent='';selected=undefined;nextOffset=null;}
 function denied(error:unknown){return error instanceof ApiError&&[401,403,404].includes(error.status);}
-async function loadReport(target:AdminTarget){const request=++reportEpoch,auth=epoch;selected=target;$('report').hidden=false;$('target-name').textContent=target.name;$('target-detail').textContent=`${target.kind==='instagram_account'?'Instagram account':'One-off project'} · ${target.status}${target.platformAccountRef?` · ${target.platformAccountRef}`:''}`;$('report-status').textContent='Loading report…';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();
+async function loadReport(target:AdminTarget){clearProjectTheme($('report'));const request=++reportEpoch,auth=epoch;selected=target;$('report').hidden=false;$('target-name').textContent=target.name;$('target-detail').textContent=`${target.kind==='instagram_account'?'Instagram account':'One-off project'} · ${target.status}${target.platformAccountRef?` · ${target.platformAccountRef}`:''}`;$('report-status').textContent='Loading report…';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();
  try{const report=await api<Report>(adminReportPath(target,month.value));if(request!==reportEpoch||auth!==epoch)return;renderReport(report);$('report-status').textContent=report.metrics.length?'':'No metrics are linked to this project yet. Add metrics through authorized MCP tools.';if(!report.metrics.length)$('metrics').replaceChildren();}
  catch(error){if(request!==reportEpoch||auth!==epoch)return;if(denied(error)){clear();status('Administrator access could not be verified. Sign in again or ask an operator to check access.');}else $('report-status').textContent=message(error);}
 }

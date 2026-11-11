@@ -19,7 +19,7 @@ export function safeSignInReturn(returnPath:string,origin:string):string {
  if(url.pathname!=='/authorize'&&url.search)throw new Error('Unexpected sign-in parameters');
  return url.href;
 }
-const allowedScopes=new Set(['mcp:connect','clients:read','offline_access','projects:read','projects:write','metrics:read','metrics:write','content:read','content:write','clients:write']);
+const allowedScopes=new Set(['mcp:connect','clients:read','offline_access','themes:read','themes:write','projects:read','projects:write','metrics:read','metrics:write','content:read','content:write','clients:write']);
 export function validProposal(value:ConsentProposal):boolean {
  return Boolean(value&&typeof value.handle==='string'&&value.handle&&typeof value.client?.name==='string'&&(typeof value.client.domain==='string'||value.client.domain===null)&&typeof value.client.redirectHost==='string'&&typeof value.client.isLoopback==='boolean'&&typeof value.tenant?.name==='string'&&typeof value.tenant.id==='string'&&Number.isFinite(Date.parse(value.expiresAt))&&Number.isFinite(Date.parse(value.consentExpiresAt))&&Array.isArray(value.scopes)&&value.scopes.every(s=>typeof s.id==='string'&&allowedScopes.has(s.id)&&typeof s.label==='string'&&typeof s.selected==='boolean')&&new Set(value.scopes.map(s=>s.id)).size===value.scopes.length&&Array.isArray(value.clients)&&value.clients.every(c=>typeof c.id==='string'&&typeof c.name==='string'&&typeof c.selected==='boolean')&&new Set(value.clients.map(c=>c.id)).size===value.clients.length);
 }

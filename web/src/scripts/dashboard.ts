@@ -1,3 +1,4 @@
+import { clearProjectTheme } from './theme';
 import {resolveWorkspaceAccess,sessionChangeGuard,verificationMessage} from './access-state';
 import {getClerk,mountSignIn} from './auth';
 import {api,message,ApiError} from './api';
@@ -9,7 +10,7 @@ let targets:Target[]=[];let controller:AbortController|undefined;let generation=
 const month=$<HTMLInputElement>('month');const selector=$<HTMLSelectElement>('target');
 month.value=new Date().toISOString().slice(0,7);
 function status(text:string,retry?:()=>void){const box=$('status');box.replaceChildren(document.createTextNode(text));box.hidden=!text;if(retry){const button=document.createElement('button');button.textContent='Try again';button.className='text-button';button.onclick=retry;box.append(' ',button);}}
-function clearReport(){for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
+function clearReport(){clearProjectTheme($('dashboard'));for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
 async function loadReport(){controller?.abort();controller=new AbortController();const request=++generation;const target=targets[Number(selector.value)];clearReport();if(!target)return;status('Loading this month’s report…');$('dashboard').setAttribute('aria-busy','true');$('target-name').textContent=target.name;$('target-detail').textContent=`${target.kind==='instagram_account'?'Instagram account':'One-off project'}${target.platformAccountRef?` · ${target.platformAccountRef}`:''}`;$('target-avatar').textContent=target.kind==='instagram_account'?'◎':'↗';$('target-status').textContent=target.status;
  try{const report=await api<Report>(`/api/targets/${encodeURIComponent(target.clientId)}/${encodeURIComponent(target.projectId)}/report?month=${encodeURIComponent(month.value)}`,{signal:controller.signal});if(request!==generation)return;renderReport(report);$('dashboard').hidden=false;status('');}
  catch(e){if(request!==generation||(e instanceof DOMException&&e.name==='AbortError'))return;status(message(e),()=>void loadReport());if(e instanceof ApiError&&[401,403,404].includes(e.status)){$('dashboard').hidden=true;if(e.status===401){$('welcome').hidden=true;status(verificationMessage,()=>void boot());}}}
