@@ -17,6 +17,8 @@ async function loadReport(){controller?.abort();controller=new AbortController()
 }
 async function boot(){
  const authRequest=++authGeneration;
+ let adminRole=false;
+ $('admin-link').hidden=true;
  controller?.abort();generation++;clearReport();targets=[];selector.replaceChildren();
  $('dashboard').hidden=true;$('welcome').hidden=true;unmount?.();unmount=undefined;
  status('Opening your workspace…');
@@ -24,7 +26,12 @@ async function boot(){
   const clerk=await getClerk();if(authRequest!==authGeneration||signingOut)return;
   $('logout').hidden=!clerk.session;$('identity').textContent=clerk.session?'Signed in · checking access':'Private client portal';
   if(!stopAuth){const changed=sessionChangeGuard(clerk.session?.id??null,()=>{if(!signingOut)void boot();});stopAuth=clerk.addListener(({session})=>changed(session?.id??null));}
-  const access=await resolveWorkspaceAccess<Target>(()=>clerk.session?.id??null,()=>authRequest===authGeneration&&!signingOut,()=>api('/api/session'),async()=>(await api<{targets:Target[]}>('/api/targets')).targets);
+  const access=await resolveWorkspaceAccess<Target>(()=>clerk.session?.id??null,()=>authRequest===authGeneration&&!signingOut,()=>api('/api/session'),async()=>{
+   try{const admin=await api<{authenticated:boolean;role?:string}>('/api/admin/session');adminRole=admin.authenticated===true&&admin.role==='super_admin';}
+   catch(error){if(!(error instanceof ApiError&&[403,404].includes(error.status)))throw error;}
+   if(adminRole&&new URLSearchParams(location.search).get('view')!=='client')return [];
+   return (await api<{targets:Target[]}>('/api/targets')).targets;
+  });
   if(authRequest!==authGeneration||signingOut||access.kind==='stale')return;
   if(access.kind==='verification_failed'){
    $('logout').hidden=!clerk.session;status(verificationMessage,()=>void boot());return;
@@ -34,6 +41,8 @@ async function boot(){
    unmount=await mountSignIn($<HTMLDivElement>('clerk-sign-in'),'/',()=>authRequest===authGeneration&&!signingOut);
    if(authRequest===authGeneration)status('');return;
   }
+  if(adminRole&&new URLSearchParams(location.search).get('view')!=='client'){location.replace('/admin');return;}
+  $('admin-link').hidden=!adminRole;
   $('identity').textContent=access.email??'Signed in';$('logout').hidden=false;targets=access.targets;
   if(!targets.length){status('You’re signed in, but no accounts or projects are shared with you yet. Ask your administrator to grant access.');return;}
   targets.forEach((t,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=t.name;selector.append(option);});

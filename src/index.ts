@@ -16,6 +16,7 @@ import { portalTargets, portalReport } from "./portal.ts";
 import { getHumanIdentity, clerkConfiguration } from "./humanAuth.ts";
 import type { InvitationEnv } from "./mail.ts";
 import { getAdminSession } from "./admin.ts";
+import { handleAdminReadRequest } from "./adminReports.ts";
 
 export type Env = InferEnv<UnwrapConfig<typeof config.worker>> & InvitationEnv;
 const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -98,6 +99,8 @@ export default {
           const admin = getAdminSession(session, env);
           return secureResponse(admin ? Response.json({ authenticated: true, ...admin }) : Response.json({ error: "Administrator access is unavailable." }, { status: 403 }), true);
         }
+        const adminResponse = await handleAdminReadRequest(request, env, session);
+        if (adminResponse) return secureResponse(adminResponse, true);
         if (url.pathname === "/api/targets") return secureResponse(Response.json(await portalTargets(env.DB, session)), true);
         const match = url.pathname.match(/^\/api\/targets\/([^/]+)\/([^/]+)\/report$/);
         if (match) {

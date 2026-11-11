@@ -22,7 +22,7 @@ export default defineConfig({
       // Reference the already configured server secret; never store its value here.
       RESEND_API_KEY: bindings.secret(),
       RESEND_FROM: bindings.text("content-hub@unreelviews.com"),
-      ADMIN_ACCESS_ENABLED: bindings.text("false"),
+      ADMIN_ACCESS_ENABLED: bindings.text("true"),
       CLERK_AUTH_ENABLED: bindings.text("true"),
       // Existing encrypted secret added by the owner; no secret value is in source.
       CLERK_SECRET_KEY: bindings.secret(),
