@@ -1,0 +1,39 @@
+---
+import Brand from './Brand.astro';
+import Icon from './AdminIcon.astro';
+import '../styles/admin.css';
+import '../styles/workspace.css';
+import '../styles/report.css';
+interface Props { area: 'client' | 'admin'; heading: string; description: string; }
+const { area, heading, description } = Astro.props;
+const isAdmin = area === 'admin';
+---
+<div class:list={['admin-app', 'workspace-app', { 'client-app': !isAdmin }]} data-workspace={area}>
+  <dialog id="workspace-navigation" class="workspace-navigation" aria-label="Workspace navigation" role="complementary" open>
+    <div class="navigation-brand"><Brand href={isAdmin ? '/admin' : '/'} subtitle={isAdmin ? 'Administrator' : 'Client workspace'} /><button id="close-navigation" class="icon-button" aria-label="Close navigation"><Icon name="close" /></button></div>
+    <p class="navigation-label">Workspace</p>
+    <nav class="workspace-links" aria-label="Main navigation">
+      {isAdmin ? <>
+        <a class="workspace-link is-current" href="/admin" aria-current="page" aria-label="All projects" title="All projects"><Icon name="grid" /><span>All projects</span></a>
+        <a class="workspace-link" href="/?view=client" aria-label="Client view" title="Client view"><Icon name="chart" /><span>Client view</span></a>
+      </> : <>
+        <a class="workspace-link is-current" href="/?view=client" aria-current="page" aria-label="Performance" title="Performance"><Icon name="chart" /><span>Performance</span></a>
+        <a id="admin-link" class="workspace-link" href="/admin" aria-label="Administrator view" title="Administrator view" hidden><Icon name="grid" /><span>Administrator view</span></a>
+      </>}
+    </nav>
+    <div class="navigation-note"><Icon name="lock" /><div><strong>Private by design</strong><p>Read-only access to the<br/>work shared with you.</p></div></div>
+    <div class="navigation-footer"><span>unreelviews</span><span>Content workspace</span></div>
+  </dialog>
+  <div class="workspace-body">
+    <header class="workspace-topbar">
+      <div class="workspace-location"><button id="toggle-navigation" class="icon-button" aria-label="Collapse sidebar" aria-controls="workspace-navigation" aria-expanded="true"><span class="desktop-navigation-icon"><Icon name="sidebar" /></span><span class="mobile-navigation-icon"><Icon name="menu" /></span></button><a class="mobile-brand" href={isAdmin ? '/admin' : '/'} aria-label="unreel content home"><img src="/images/unreelviews-logo.jpg" width="40" height="40" alt="unreelviews" /></a><span>{isAdmin ? 'Administration' : 'Client workspace'}<span class="location-divider">/</span><strong>{isAdmin ? 'Overview' : 'Performance'}</strong></span></div>
+      <div class="admin-account"><span id="identity">{isAdmin ? 'Checking administrator access' : 'Private client portal'}</span><button id="logout" class="admin-button admin-button-quiet" hidden>Sign out</button></div>
+    </header>
+    <main id="main" class="admin-main" tabindex="-1">
+      <section class="admin-heading"><div><h1>{heading}</h1><p>{description}</p></div><span class="admin-access"><Icon name="lock" />Read-only workspace</span></section>
+      <slot />
+      <footer class="admin-footer"><span>unreel content <span aria-hidden="true">/</span> {isAdmin ? 'Administrator workspace' : 'Client workspace'}</span><span><Icon name="lock" />{isAdmin ? 'Business changes stay in MCP.' : 'Private by design'}</span></footer>
+    </main>
+  </div>
+</div>
+<script>import '../scripts/navigation';</script>

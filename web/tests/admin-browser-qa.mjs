@@ -63,7 +63,7 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('.metric-card').length===1);
  assert.equal(await page.locator('#target-name').innerText(),names[0]);
  assert.equal(await page.locator('.admin-report-button[aria-pressed="true"]').count(),1);
- assert.equal(await page.locator('.metric-card').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+ assert.equal(await page.locator('.metric-card').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(23, 26, 29)');
  await page.locator('#month').fill('2026-09');await page.locator('#month').dispatchEvent('change');
  await page.waitForFunction(()=>document.getElementById('comparison-label').textContent.includes('September'));
  assert.equal(reportMonth,'2026-09');

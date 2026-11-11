@@ -20,6 +20,6 @@ export async function mountSignIn(node:HTMLDivElement,returnPath:string,isCurren
  const returnUrl=safeSignInReturn(returnPath,location.origin);
  const clerk=await getClerk();
  if(!isCurrent()||clerk.session)return undefined;
- clerk.mountSignIn(node,{routing:'hash',forceRedirectUrl:returnUrl,signUpForceRedirectUrl:returnUrl,withSignUp:false,transferable:false,appearance:{elements:{footerAction:{display:'none'}}}});
+ clerk.mountSignIn(node,{routing:'hash',forceRedirectUrl:returnUrl,signUpForceRedirectUrl:returnUrl,withSignUp:false,transferable:false,appearance:{variables:{colorBackground:'#171a1d',colorForeground:'#edf1f3',colorPrimary:'#8de0cd',colorPrimaryForeground:'#101214',colorNeutral:'#ffffff',colorMutedForeground:'#a0a9b2',colorInput:'#202428',colorInputForeground:'#edf1f3',borderRadius:'0.5rem'},elements:{footerAction:{display:'none'}}}});
  return ()=>clerk.unmountSignIn(node);
 }

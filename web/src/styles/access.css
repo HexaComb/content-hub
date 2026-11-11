@@ -1,0 +1,16 @@
+.access-app { min-height: 100dvh; background: #101214; color: #edf1f3; color-scheme: dark; --ink: #edf1f3; --muted: #a0a9b2; --line: #2b3035; --green: #8de0cd; }
+.access-app .app-brand { justify-content: center; margin-bottom: 28px; }
+.access-app .invite-page { padding-block: 36px; }
+.access-app .invite-card { background: #171a1d; border-color: var(--line); }
+.access-app h1 { font-size: 32px; line-height: 1.2; letter-spacing: -.8px; }
+.access-app h1 span { color: #8de0cd; }
+.access-app :is(.invite-card>p,.small,.scope-box p,.invite-footnote) { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.access-app .scope-box { background: #202428; }
+.access-app .notice { background: #202b27; color: #d1dfd8; border-color: #45524e; }
+.access-app .primary { background: #8de0cd; color: #101214; font-size: 13px; min-height: 44px; }
+.access-app .primary:hover { background: #b4efdf; }
+.access-app :is(.text-button,.back-link) { color: #8de0cd; min-height: 44px; padding-block: 12px; }
+.access-app :is(button,a,input):focus-visible { outline-color: #8de0cd; }
+.access-app .consent-choice { padding-block: 8px; min-height: 44px; }
+.access-app .consent-choice input { accent-color: #8de0cd; }
+.access-app .eyebrow { display: none; }

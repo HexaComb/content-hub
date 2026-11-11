@@ -1,6 +1,7 @@
 ---
-name: unreel content administrator dashboard
-description: Dark administrator chrome for the private read-only agency metrics workspace.
+name: unreel content workspace
+description: Shared dark client and administrator workspace, preserving custom
+  project designs.
 colors:
   admin-accent: "#8de0cd"
   admin-bg: "#101214"
@@ -21,127 +22,192 @@ colors:
   status-paused-text: "#e8ca8a"
   status-completed-bg: "#253346"
   status-completed-text: "#a8c8ef"
+  control-border: "#394148"
+  control-hover-border: "#56616b"
+  secondary-text: "#c5cdd4"
+  report-label: "#b8c2cb"
+  chart-previous: "#58656e"
+  neutral-status-bg: "#292f35"
+  neutral-status-text: "#c7cfd6"
+  declined-bg: "#3d2b23"
+  declined-text: "#f1bd99"
+  notice-bg: "#202b27"
+  notice-text: "#d1dfd8"
+  notice-border: "#45524e"
+  row-bg: "#1d2125"
+  row-hover-bg: "#1d2327"
+  row-selected-bg: "#1c2c28"
+  project-name: "#e1e7ec"
+  icon-muted: "#95a4af"
+  navigation-note: "#d1d8de"
+  breadcrumb-text: "#d8dfe4"
+  breadcrumb-divider: "#74808b"
+  avatar-border: "#355147"
+  scrollbar-thumb: "#505a63"
+  backdrop: rgb(0 0 0 / .65)
 typography:
   headline:
-    fontSize: "32px"
+    fontSize: 32px
     fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "-0.9px"
+    letterSpacing: -0.9px
   title:
-    fontSize: "16px"
+    fontSize: 16px
     fontWeight: 600
-    letterSpacing: "-0.2px"
+    letterSpacing: -0.2px
   body:
-    fontFamily: 'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-    fontSize: "14px"
+    fontFamily: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif
+    fontSize: 14px
     lineHeight: 1.5
   label:
-    fontSize: "11px"
+    fontSize: 11px
     fontWeight: 500
   total:
-    fontSize: "36px"
+    fontSize: 36px
     fontWeight: 500
     lineHeight: 1.15
-    letterSpacing: "-1px"
+    letterSpacing: -1px
+  compact-label:
+    fontSize: 10px
+  supporting:
+    fontSize: 12px
+  control:
+    fontSize: 13px
+  section-title:
+    fontSize: 15px
+    fontWeight: 600
+  target-title:
+    fontSize: 18px
+    fontWeight: 600
+    lineHeight: 1.4
+  context-title:
+    fontSize: 22px
+    lineHeight: 1.3
+    letterSpacing: -0.5px
+  mobile-metric:
+    fontSize: 28px
+  mobile-headline:
+    fontSize: 29px
+  metric:
+    fontSize: 34px
+    fontWeight: 550
+    lineHeight: 1.2
+    letterSpacing: -1px
 rounded:
-  status: "5px"
-  button: "7px"
-  navigation: "8px"
-  surface: "12px"
+  status: 5px
+  button: 7px
+  navigation: 8px
+  surface: 12px
+  brand: 10px
 spacing:
-  compact: "8px"
-  small: "12px"
-  medium: "16px"
-  inset: "20px"
-  section: "24px"
-  large: "32px"
-  desktop-gutter: "40px"
+  compact: 8px
+  small: 12px
+  medium: 16px
+  inset: 20px
+  section: 24px
+  large: 32px
+  desktop-gutter: 40px
 components:
   button:
     backgroundColor: "{colors.button-bg}"
     textColor: "{colors.button-text}"
     rounded: "{rounded.button}"
-    padding: "8px 12px"
+    padding: 8px 12px
+    height: 44px
   button-quiet:
-    backgroundColor: "transparent"
+    backgroundColor: transparent
     textColor: "{colors.admin-muted}"
     rounded: "{rounded.button}"
-    padding: "8px 12px"
+    padding: 8px 12px
+    height: 44px
   report-action:
-    backgroundColor: "transparent"
+    backgroundColor: transparent
     textColor: "{colors.admin-accent}"
-    padding: "10px 0 10px 8px"
+    padding: 10px 0 10px 8px
   navigation-current:
     backgroundColor: "{colors.navigation-current-bg}"
     textColor: "{colors.navigation-current-text}"
     rounded: "{rounded.navigation}"
-    padding: "12px 14px"
+    padding: 12px
   status-active:
     backgroundColor: "{colors.status-active-bg}"
     textColor: "{colors.status-active-text}"
     rounded: "{rounded.status}"
-    padding: "3px 7px"
+    padding: 3px 7px
   directory:
     backgroundColor: "{colors.admin-surface}"
     rounded: "{rounded.surface}"
+  report-input:
+    backgroundColor: "{colors.admin-raised}"
+    textColor: "{colors.admin-text}"
+    rounded: "{rounded.button}"
+    padding: 8px 10px
+    height: 44px
+  navigation-toggle:
+    backgroundColor: transparent
+    textColor: "{colors.secondary-text}"
+    rounded: "{rounded.navigation}"
+    padding: 12px
+    height: 44px
+    width: 44px
 ---
 
-# Design System: unreel content administrator dashboard
+# Design System: unreel content workspace
 
 ## Overview
 
 **Creative North Star: "Sleek, modern dark dashboard"** (user-pinned direction).
 
-The administrator dashboard is a sleek, modern dark shell for unreel content’s private, read-only agency metrics workspace. Charcoal surfaces, restrained mint accents, clear totals and a project-first directory implement the user’s chosen direction. This is a code-led record of the delivered dashboard, not a broader brand identity.
+The client and administrator dashboards share a sleek, modern dark shell for unreel content’s private, read-only metrics workspace. Charcoal surfaces, restrained mint accents, clear totals and readable reports extend the user’s chosen direction. This is a code-led record of the delivered application, not a broader brand identity.
 
-Scope is administrator chrome on /admin only. Individual client/project themes and report visual styles are out of scope and inherited unchanged. Unthemed reports retain the default light palette; custom project themes are authoritative through project-theme.css and data-project-theme. The admin wrapper isolates report content and provides surrounding spacing. Product context comes from README.md; no PRODUCT.md or additional interview decisions are assumed.
+The shared shell covers / and /admin; default reports and invitation/connection pages are also dark. Custom project designs remain authoritative inside data-project-theme. Product context comes from README.md; no PRODUCT.md or additional interview decisions are assumed.
 
-**Key Characteristics:**
-
-- Charcoal surfaces with restrained mint navigation and report actions.
-- Clear totals, aligned project rows and compact supporting text.
-- Responsive navigation and keyboard-accessible table scrolling.
+The genuine unreelviews logo is copied byte-for-byte from the sibling project’s ../unreelviews/components/unreel_views.jpg into web/public/images/unreelviews-logo.jpg. Brand.astro shares it across the shell and access pages; Shell.astro uses the same JPEG as the favicon. CSS crops the displayed image without changing the source bytes.
 
 ## Colors
 
-Mint is the primary accent for current navigation, report actions, keyboard focus and text selection. The neutral palette separates the charcoal canvas, sidebar and raised surfaces; light text and muted supporting copy establish hierarchy. Green, amber and blue status treatments accompany written state labels.
+Mint marks navigation, report actions, keyboard focus and text selection. Neutral charcoal surfaces establish depth; light and muted text establish hierarchy. Written status labels accompany green, amber, blue and neutral treatments; report declines use warm orange.
 
-Token values above reflect `web/src/styles/admin.css`. They do not redefine the default client palette in `web/src/styles/global.css` or custom themes in `project-theme.css`, selected through `data-project-theme`.
+The frontmatter records the shared admin.css, workspace.css, report.css and access.css values. The --admin-* token names are an inherited implementation detail shared by both roles.
+
+**The Project Boundary Rule.** Default report styles apply only to :is(#dashboard,#report):not([data-project-theme]). Saved project colors, typography, layout and ordering remain authoritative through project-theme.css. Switching back to an unthemed target restores the dark default.
 
 ## Typography
 
-The dashboard inherits the existing Inter/system sans-serif stack; no new font asset is supplied. Headline and title roles establish page and directory hierarchy. Project names use medium emphasis (13px, weight 550); row metadata and actions remain compact (11–12px). Totals use tabular numerals. At the mobile breakpoint, page headings and totals reduce to 29px.
+The application retains its existing Inter/system sans-serif stack; no new font asset was introduced. Page headings and totals establish hierarchy, while controls and report metadata remain compact. The observed size steps are 10, 11, 12, 13, 14, 15, 16, 18, 22, 28, 29, 32, 34 and 36px. The smallest step is for compact labels and status; supporting report copy uses 11–12px. Mobile headings and totals use 29px; mobile metric values use 28px. Numeric totals, metric values and chart labels use tabular numerals.
 
 ## Layout
 
-The desktop sidebar is fixed (232px), with a matching workspace offset. The content area is centered with a maximum width of 1500px and padding of 42px 40px 24px; the top bar has a minimum height of 76px. Three equally sized totals share one divided surface above the project directory.
+Workspace.astro owns both role-specific shells. Desktop navigation is fixed at 232px; the compact desktop breakpoint (1100px) reduces it to 216px. Collapsing it leaves an 80px icon rail and expands the content area. Only this preference persists in local storage.
 
-At widths up to 1100px, the sidebar narrows to 204px and content gutters to 24px. Up to 760px, navigation becomes an in-flow header, the workspace offset disappears and content gutters become 20px. Totals stay in three columns; footer content stacks. At 1600px and above, main top padding becomes 52px.
+At 900px and below, navigation.ts presents the sidebar as a native modal dialog, bounded to min(320px, 90vw), with no workspace offset. The top bar has a 68px minimum height, versus 76px on desktop. Main content is centered with a 1500px maximum width; desktop padding is 42px 40px 24px. Gutters reduce to 24px at 1100px and 20px at 760px. Wide desktop top padding becomes 52px at 1600px.
 
-The project table keeps a minimum width of 690px inside a labeled, focusable horizontal scroll region. Columns prioritize project/account, client, workspace, status and report action. Long names wrap within cells rather than widening the page.
+Default report metrics use four columns, two at 1200px and one at 380px. The comparison/context area becomes one column at 1200px; selectors and comparison charts stack at 760px. Administrator totals retain three columns. Tables scroll inside labeled, focusable regions; the directory has a 690px minimum width. Long names wrap without widening the page.
 
 ## Elevation & Depth
 
-The administrator shell uses tonal layering and single-pixel borders without shadows. Row hover and selected-report backgrounds provide local state emphasis. Report surfaces inherit their existing treatment independently.
+The shared shell and default reports use tonal layering and single-pixel borders without shadows. Hover and selected-row backgrounds provide local emphasis. The mobile drawer dims the background with a translucent black backdrop. Custom projects retain their own surface treatment.
 
 ## Shapes
 
-Surfaces use gently rounded corners; navigation and notices use smaller curves, buttons smaller still, and status labels are compact rounded rectangles. Avatar and tiny state markers are circular. Icons are authored SVG with a consistent 1.6 stroke width and rounded caps and joins.
+Directory and welcome surfaces use 12px corners; navigation and notices use 8px; controls use 7px; compact status labels use 5px. The brand crop and default target avatar use 10px corners deliberately. SVG navigation icons use a consistent 1.6 stroke with rounded caps and joins.
 
 ## Components
 
-- **Buttons:** bordered refresh action, quiet sign-out/pagination actions and mint report actions. Buttons have a minimum height of 36px; report actions use text padding. Hover lightens button surfaces or reveals the report underline. Disabled controls inherit reduced opacity and a waiting cursor.
-- **Navigation:** current location has a mint-tinted surface, text and small marker; ordinary links use muted text and a raised hover surface. Mobile navigation becomes horizontal.
-- **Totals:** a single three-part definition list with large tabular values, labels and short context. Values come from API totals, independently of pagination.
-- **Directory:** one bordered surface contains the heading, table and pagination footer. Status includes written text and a small dot. Selecting a report marks its action and moves focus to the report region.
-- **Notices:** readable tinted surfaces convey loading, empty and denied states. Authentication remains the existing Clerk flow; this document does not define a new form theme.
+- **Brand:** shared authentic image with role-specific subtitle; mobile uses the image alone. Collapsed navigation retains accessible link names and native title hints.
+- **Navigation:** current links use mint-tinted surfaces. Desktop collapse preserves destination access. Mobile opening moves focus inside the dialog; Tab and Shift-Tab remain contained. Close, Escape and backdrop dismissal restore opener focus. Breakpoint changes restore nonmodal navigation and release background scrolling.
+- **Buttons and fields:** shared shell buttons, navigation controls and default month controls target 44px. Report actions retain text padding. Hover lightens surfaces or reveals the report underline. Disabled controls inherit reduced opacity and a waiting cursor.
+- **Reports:** default dark selectors, metric cards, comparison bars and provenance tables share report.css. Custom designs bypass those defaults. Loading, unavailable data and partial readings retain explicit text.
+- **Directory:** a single bordered surface contains heading, table and pagination. API totals are independent of pagination. Selecting a report marks the action and focuses its region.
+- **Access pages:** invitation and consent pages use the shared logo and dark palette. Clerk appearance uses supported background, foreground, primary, muted and input variables; live authentication/provider redirects remain unverified.
 
-Administrator links, buttons and focusable regions have a mint focus outline (2px, offset 4px). Button, navigation and row background transitions use 150ms ease-out only when reduced motion is not requested. Selection and scrollbar colors follow the administrator palette. Report inputs, focus styling and report components remain inherited and outside this system.
+**The Visible State Rule.** Shared links, buttons and focusable regions use mint focus outlines (2px, offset 4px); status is always written. Tables retain keyboard scrolling. Button and row background transitions use 150ms ease-out only when reduced motion is not requested. No navigation transition is currently authored. Custom projects retain their own focus colors.
 
 ## Do's and Don'ts
 
-- Do keep administrator colors scoped to the administrator shell.
-- Do preserve visible focus, status text and accessible table labels.
-- Do use the existing SVG stroke icons and tabular numerals for totals.
-- Don’t apply this palette or typography scale to individual client/project themes or report content.
-- Don’t imply that dashboard controls can edit business data; this workspace is read-only.
+- Do share shell behavior across client and administrator views.
+- Do preserve visible focus, explicit status text, accessible table labels and tabular numeric values.
+- Do reuse the authentic logo and authored SVG navigation icons.
+- Don’t override a saved project design with default report styling.
+- Don’t imply that read-only dashboard controls edit business data.

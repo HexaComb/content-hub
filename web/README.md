@@ -10,7 +10,7 @@ npx tsc --noEmit -p web/tsconfig.json
 node --test web/tests/*.test.ts
 ```
 
-Pages: `/` is the authenticated report or Clerk sign-in; `/invite#token=…` previews and explicitly accepts a scoped invitation after matching verified Clerk authentication. No sample-data route, real credentials, or client fixtures are included.
+Pages: `/` is the authenticated report or Clerk sign-in; `/invite#token=…` previews and explicitly accepts a scoped invitation after matching verified Clerk authentication. No sample-data route or real credentials are included; synthetic fixtures are restricted to browser tests.
 
 ## Clerk integration
 
@@ -53,8 +53,21 @@ Explicit approval or denial sends `{handle,decision,scopes,clientIds}` by authen
 
 Local unit coverage includes safe return paths, supported proposal fields/scopes, unchecked write defaults, and redirect scheme/host constraints. Live Clerk/OAuth consent, cancellation and browser layout remain unverified until tested in an authorized configured environment. No live connections or credentials are created by these tests.
 
-## Administrator dashboard
+## Dashboard UI and browser verification
 
-`/admin` has a scoped dark dashboard in `src/styles/admin.css`. Its `--admin-*` tokens and `admin-*` classes keep the dashboard independent from the client portal and individual project reports. Shared report styles remain in `src/styles/global.css`; unthemed reports keep their existing light palette. The `data-project-theme` canvas and `src/styles/project-theme.css` retain full control of custom project colors, typography and layout. Totals come from the authorized overview response, while the project directory retains server pagination.
+Client and administrator views share `src/components/Workspace.astro`, `src/scripts/navigation.ts` and the styles in `src/styles/workspace.css`. The desktop sidebar can collapse to an icon rail; at 900px and below it becomes a native modal drawer with keyboard containment, Escape/backdrop dismissal, scroll locking and focus return. Only the non-sensitive collapsed preference is stored in browser storage. Client access and administrator eligibility remain server-controlled.
 
-After `npm run build:web`, run `node web/tests/admin-browser-qa.mjs` with Playwright available. Set `PLAYWRIGHT_MODULE` to its module path and `CHROMIUM_PATH` to your Chromium/Chrome executable when needed. Screenshots default to `/tmp/content-hub-admin-qa` (override with `QA_OUTPUT`). The suite checks desktop/mobile layouts, totals, pagination, report/month selection, refresh, empty/denied states, and report palette isolation with synthetic APIs and a test-only authentication adapter. It does not validate live Clerk sign-in.
+`src/styles/report.css` provides dark defaults for both report views only when `data-project-theme` is absent. Saved project palettes, typography, layout, ordering and brand content remain controlled by `src/styles/project-theme.css` and the existing theme renderer. Invitation/consent pages and Clerk appearance options use the same application palette. `Brand.astro` uses the unchanged logo copied from the existing unreelviews project's `components/unreel_views.jpg`; it is also the favicon.
+
+After `npm run build:web`, run the browser suites with Playwright available. Set `PLAYWRIGHT_MODULE` to its module path and `CHROMIUM_PATH` to your Chromium/Chrome executable when needed:
+
+```sh
+node web/tests/client-browser-qa.mjs
+node web/tests/admin-browser-qa.mjs
+node web/tests/theme-browser-qa.mjs
+node web/tests/browser-qa.mjs
+```
+
+Client screenshots default to `/tmp/content-hub-client-qa`, administrator screenshots to `/tmp/content-hub-admin-qa` (override either with `QA_OUTPUT`). The client suite checks actual client rendering, logo loading, contrast, collapse/persistence, modal navigation with keyboard and emulated touch, month/target changes, all theme presets, and retry/empty/denied/signed-out states. The administrator suite verifies totals, pagination and reports. The theme suite exercises 30 responsive combinations; the original portal suite tests authentication unavailability and invitation recovery. Synthetic authentication/API adapters exist only inside the browser tests and are never bundled into the application. Live Clerk sign-in and provider redirects still require a configured test account.
+
+See [the UX audit](../docs/ux-audit.md) for findings, fixes and verification limits.

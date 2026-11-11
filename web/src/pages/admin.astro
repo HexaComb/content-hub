@@ -1,24 +1,10 @@
 ---
 import Shell from '../layouts/Shell.astro';
 import AdminIcon from '../components/AdminIcon.astro';
-import '../styles/admin.css';
+import Workspace from '../components/Workspace.astro';
 ---
 <Shell title="Administrator overview">
-<div class="admin-app">
-  <aside class="admin-sidebar">
-    <a class="admin-brand" href="/admin" aria-label="unreel content home"><span class="admin-monogram" aria-hidden="true">u<span>c</span></span><span>unreel<span class="admin-brand-sub">content workspace</span></span></a>
-    <div class="admin-nav-label">Workspace</div>
-    <nav class="admin-nav" aria-label="Workspace navigation">
-      <a class="admin-nav-link is-current" href="/admin" aria-current="page"><AdminIcon name="grid" />All projects<span class="admin-nav-indicator"></span></a>
-      <a class="admin-nav-link" href="/?view=client"><AdminIcon name="arrow" />Client view</a>
-    </nav>
-    <div class="admin-sidebar-note"><AdminIcon name="lock" /><div><strong>Private workspace</strong><p>Read-only access.<br/>Shared with care.</p></div></div>
-    <div class="admin-sidebar-foot"><span class="admin-avatar" aria-hidden="true">A</span><div>Administrator<span>Workspace access</span></div></div>
-  </aside>
-  <div class="admin-workspace">
-    <header class="admin-topbar"><div class="admin-breadcrumb">Workspace<span>/</span><strong>Overview</strong></div><div class="admin-account"><span id="identity">Checking administrator access</span><button id="logout" class="admin-button admin-button-quiet" hidden>Sign out</button></div></header>
-    <main id="main" class="admin-main">
-      <section class="admin-heading"><div><h1>All projects</h1><p>Your clients, projects and performance. One clear view.</p></div><span class="admin-access"><AdminIcon name="lock" />Read-only workspace</span></section>
+<Workspace area="admin" heading="All projects" description="Your clients, projects and performance. One clear view.">
       <div id="status" class="admin-notice" role="status" aria-live="polite">Checking administrator access…</div>
       <section id="welcome" class="admin-welcome" hidden><h2>Administrator sign-in</h2><p>Use your existing authorized account. Signing in does not grant administrator access.</p><div id="clerk-sign-in" class="clerk-container"></div></section>
       <div id="admin-workspace" hidden>
@@ -35,9 +21,6 @@ import '../styles/admin.css';
 <section id="report" tabindex="-1" hidden><section class="toolbar"><span class="quiet-pill">Administrator report view</span><div class="month-control"><label for="month">REPORTING MONTH</label><input type="month" id="month" min="1000-01" max="9999-12"/></div></section><section class="target-heading"><img id="theme-logo" hidden alt=""/><div><p id="theme-eyebrow" hidden></p><h2 id="target-name"></h2><p id="target-detail"></p><p id="theme-tagline" hidden></p></div></section><div class="theme-divider" aria-hidden="true"></div><p id="report-status" role="status" aria-live="polite"></p><div class="section-heading"><h2>At a glance</h2><p id="comparison-label"></p></div><section id="metrics" class="metrics"></section><section class="panel comparison-panel"><h2>Two months, side by side</h2><div id="comparison-chart" class="comparison-chart"></div></section><section class="panel data-panel"><div class="table-scroll" tabindex="0" role="region" aria-label="Monthly metric readings"><table><thead><tr><th scope="col">Metric</th><th scope="col">Selected month</th><th scope="col">Previous month</th><th scope="col">Change</th><th scope="col">Quality / collection date</th></tr></thead><tbody id="metric-rows"></tbody></table></div></section></section>
         </div>
       </div>
-      <footer class="admin-footer"><span>unreel content <span aria-hidden="true">/</span> Administrator workspace</span><span><AdminIcon name="lock" />Business changes stay in MCP.</span></footer>
-    </main>
-  </div>
-</div>
+</Workspace>
 <script>import '../scripts/admin';</script>
 </Shell>

@@ -17,29 +17,6 @@
 .admin-app ::selection { background: #8de0cd; color: #101214; }
 .admin-app svg { flex-shrink: 0; }
 .admin-app :is(a, button, [tabindex]):not([data-project-theme], [data-project-theme] *):focus-visible { outline: 2px solid var(--admin-accent); outline-offset: 4px; }
-.admin-sidebar { position: fixed; inset: 0 auto 0 0; width: 232px; padding: 32px 18px 20px; display: flex; flex-direction: column; background: #141719; border-right: 1px solid var(--admin-border); }
-.admin-brand { display: flex; gap: 12px; align-items: center; padding: 0 14px; text-decoration: none; font-size: 23px; font-weight: 650; letter-spacing: -.6px; line-height: 1.1; }
-.admin-monogram { display: flex; align-items: center; justify-content: center; width: 36px; height: 40px; color: var(--admin-accent); font-size: 31px; letter-spacing: -7px; padding-right: 7px; }
-.admin-monogram span { color: var(--admin-text); }
-.admin-brand-sub { display: block; margin-top: 7px; font-size: 11px; font-weight: 400; color: var(--admin-muted); letter-spacing: .2px; }
-.admin-nav-label { margin: 49px 14px 12px; font-size: 11px; font-weight: 600; color: var(--admin-muted); }
-.admin-nav { display: grid; gap: 6px; }
-.admin-nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; color: var(--admin-muted); text-decoration: none; font-size: 13px; }
-.admin-nav-link:hover { background: var(--admin-raised); color: var(--admin-text); }
-.admin-nav-link.is-current { background: #23332f; color: #b4efdf; }
-.admin-nav-indicator { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: var(--admin-accent); }
-.admin-sidebar-note { margin-top: auto; padding: 24px 14px; display: flex; gap: 12px; color: var(--admin-muted); font-size: 12px; }
-.admin-sidebar-note svg { margin-top: 2px; }
-.admin-sidebar-note strong { color: #d1d8de; font-weight: 500; }
-.admin-sidebar-note p { margin: 6px 0 0; line-height: 1.7; }
-.admin-sidebar-foot { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--admin-border); padding: 22px 14px 0; font-size: 12px; }
-.admin-sidebar-foot div>span { display: block; color: var(--admin-muted); font-size: 11px; margin-top: 3px; }
-.admin-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #31383e; color: #d1d8de; }
-.admin-workspace { margin-left: 232px; min-width: 0; }
-.admin-topbar { min-height: 76px; padding: 16px 40px; border-bottom: 1px solid var(--admin-border); display: flex; align-items: center; justify-content: space-between; gap: 24px; font-size: 12px; }
-.admin-breadcrumb { display: flex; align-items: center; gap: 18px; color: var(--admin-muted); white-space: nowrap; }
-.admin-breadcrumb>span { color: #74808b; }
-.admin-breadcrumb strong { color: #d8dfe4; font-weight: 500; }
 .admin-account { display: flex; align-items: center; justify-content: flex-end; gap: 16px; min-width: 0; color: var(--admin-muted); }
 .admin-account>span { overflow-wrap: anywhere; }
 .admin-main { max-width: 1500px; margin: 0 auto; padding: 42px 40px 24px; }
@@ -96,36 +73,15 @@
 .admin-footer>span { display: flex; align-items: center; gap: 10px; }
 .admin-footer svg { width: 13px; height: 13px; }
 .admin-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-/* Custom project themes own their canvas; only unthemed reports get defaults. */
-.admin-report-area #report:not([data-project-theme]) :is(a, button, [tabindex]):focus-visible { outline: 3px solid #b88a26; }
+/* Shared report defaults live in report.css; custom themes own their canvas. */
 .admin-report-area #report { margin-top: 28px; scroll-margin-top: 24px; }
-.admin-report-area { color: #243a35; color-scheme: light; line-height: normal; }
-.admin-report-area #report:not([data-project-theme]) { background: #f6f7f2; border-radius: 12px; padding: 24px; margin-top: 28px; scroll-margin-top: 24px; }
-.admin-report-area #report:not([data-project-theme])>.panel { margin-top: 24px; }
-.admin-report-area #report:not([data-project-theme]) #report-status { font-size: 13px; line-height: 1.7; margin: 16px 0; }
-.admin-report-area #report:not([data-project-theme]) .toolbar h2 { font-size: 20px; margin: 0 0 8px; }
-.admin-report-area #report:not([data-project-theme]) .toolbar p { margin: 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.admin-report-area #report:not([data-project-theme]) .toolbar>div:first-child { min-width: 0; }
-.admin-report-area #report:not([data-project-theme]) .toolbar h2 { overflow-wrap: anywhere; }
 @media (min-width: 1600px) { .admin-main { padding-top: 52px; } }
 @media (max-width: 1100px) {
-  .admin-sidebar { width: 204px; padding-inline: 12px; }
-  .admin-workspace { margin-left: 204px; }
   .admin-main { padding: 32px 24px 24px; }
-  .admin-topbar { padding-inline: 24px; }
   .admin-access { display: none; }
   .admin-stats>div { padding: 22px; }
 }
 @media (max-width: 760px) {
-  .admin-sidebar { position: static; width: 100%; padding: 20px 20px 12px; border-right: 0; border-bottom: 1px solid var(--admin-border); }
-  .admin-brand { padding: 0; font-size: 21px; }
-  .admin-nav-label,.admin-sidebar-note,.admin-sidebar-foot { display: none; }
-  .admin-nav { display: flex; gap: 8px; margin-top: 22px; }
-  .admin-nav-link { font-size: 12px; padding: 10px 12px; }
-  .admin-nav-indicator { display: none; }
-  .admin-workspace { margin-left: 0; }
-  .admin-topbar { min-height: 60px; padding: 12px 20px; }
-  .admin-breadcrumb { display: none; }
   .admin-account { width: 100%; justify-content: space-between; font-size: 11px; }
   .admin-main { padding: 28px 20px 20px; }
   .admin-heading { margin-bottom: 24px; }
@@ -142,7 +98,6 @@
   .admin-directory-heading p { font-size: 11px; max-width: 23ch; }
   .admin-directory-footer { padding: 16px; flex-direction: column; align-items: flex-start; }
   .admin-directory>.admin-notice { margin-inline: 16px; }
-  .admin-report-area #report:not([data-project-theme]) { padding: 16px; }
   .admin-footer { flex-direction: column; font-size: 10px; gap: 10px; }
   .admin-welcome { padding: 24px 20px; }
 }

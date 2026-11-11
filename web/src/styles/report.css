@@ -1,0 +1,95 @@
+.client-app .admin-welcome { margin: 36px auto; max-width: 620px; }
+.client-app .admin-welcome .small { color: var(--admin-muted); font-size: 12px !important; }
+:is(#dashboard,#report)[data-project-theme] { color-scheme: light; line-height: normal; }
+/* A saved project design replaces this default canvas entirely. */
+:is(#dashboard,#report):not([data-project-theme]) {
+  --ink: #edf1f3;
+  --muted: #a0a9b2;
+  --line: #2b3035;
+  --green: #8de0cd;
+  color: var(--ink);
+  color-scheme: dark;
+  & .toolbar { align-items: center; background: #171a1d; border-color: var(--line); padding: 20px 24px; gap: 24px; }
+  & .toolbar label { color: var(--muted); font-size: 10px; letter-spacing: 1px; margin-bottom: 8px; }
+  & .target-control { min-width: 0; flex: 1; max-width: 62%; }
+  & .target-control select { min-height: 44px; width: 100%; border: 1px solid #394148; background: #202428; color: var(--ink); border-radius: 7px; padding: 10px 34px 10px 12px; font-size: 14px; font-weight: 500; text-overflow: ellipsis; }
+  & .month-control>input { min-height: 44px; background: #202428; color: var(--ink); border-color: #394148; font-size: 13px; }
+  & > .comparison-panel { margin-bottom: 28px; }
+  & .month-input { gap: 6px; }
+  & .month-input input { min-height: 44px; padding: 8px 10px; color: var(--ink); background: #202428; border: 1px solid #394148; border-radius: 7px; font-size: 13px; }
+  & .month-input button { width: 44px; height: 44px; flex-shrink: 0; background: #202428; color: #c5cdd4; border-color: #394148; border-radius: 7px; }
+  & .month-input button:hover { background: #30383e; }
+  & :is(input, select, button, [tabindex]):focus-visible { outline: 2px solid #8de0cd; outline-offset: 4px; }
+  & .target-heading { margin: 28px 0; gap: 14px; }
+  & .target-heading>div:not(.target-avatar) { min-width: 0; }
+  & .target-heading h2 { font-size: 18px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+  & .target-heading p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  & .target-avatar { width: 44px; height: 44px; flex-shrink: 0; color: #8de0cd; background: #23332f; border-color: #355147; border-radius: 10px; }
+  & .quiet-pill { color: #b8c2cb; border-color: #394148; padding: 5px 10px; font-size: 11px; }
+  & .section-heading { margin-bottom: 16px; gap: 16px; }
+  & .section-heading h2 { font-size: 15px; font-weight: 600; }
+  & .section-heading p, & .section-heading>.muted { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  & .metrics { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; margin-bottom: 28px; }
+  & .metric-card { min-height: 190px; padding: 22px; background: #171a1d; border-color: var(--line); animation: none; }
+  & .metric-top h3 { font-size: 12px; line-height: 1.5; color: #c5cdd4; }
+  & .metric-symbol { display: none; }
+  & .metric-value { font-size: 34px; line-height: 1.2; font-weight: 550; letter-spacing: -1px; font-variant-numeric: tabular-nums; margin: 18px 0 14px; }
+  & .delta { font-size: 11px; background: #292f35; color: #c7cfd6; }
+  & .improved { color: #9ce3c0; background: #213a2f; }
+  & .declined { color: #f1bd99; background: #3d2b23; }
+  & .metric-context { color: var(--muted); font-size: 11px; line-height: 1.6; }
+  & .quality-warning { color: #e8ca8a; font-size: 11px; }
+  & .panel { background: #171a1d; border-color: var(--line); padding: 24px; }
+  & .detail-grid { grid-template-columns: minmax(0,1.8fr) minmax(230px,1fr); gap: 20px; margin-bottom: 28px; }
+  & .muted { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  & .comparison-chart { gap: 24px; }
+  & .bar-group h3 { font-size: 12px; color: #c5cdd4; }
+  & .bar-line { gap: 12px; }
+  & .bar-line>span { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  & .bar-track { background: #202428; }
+  & .bar { height: 10px; }
+  & .bar.current, & .current-dot { background: #8de0cd; }
+  & .bar.previous, & .previous-dot { background: #58656e; }
+  & .legend { border-color: var(--line); font-size: 11px; color: var(--muted); }
+  & .context-panel { background: transparent; }
+  & .context-panel .eyebrow { display: none; }
+  & .context-panel h2 { font-size: 22px; letter-spacing: -.5px; line-height: 1.3; }
+  & .context-panel p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+  & .context-rule { border-color: var(--line); padding-top: 18px; margin-top: 18px; }
+  & .context-rule strong { font-size: 12px; }
+  & .context-rule p { font-size: 11px; }
+  & .data-panel { padding: 24px 0 8px; overflow: hidden; }
+  & .data-panel>.section-heading { padding-inline: 24px; }
+  & .table-scroll { position: relative; }
+  & table { font-size: 12px; }
+  & th { background: #202428; color: var(--muted); font-size: 11px; letter-spacing: 0; padding: 14px 20px; }
+  & td { color: #c5cdd4; border-color: var(--line); padding: 20px; font-size: 12px; }
+  & td:last-child { color: var(--muted); font-size: 11px; }
+  & tbody tr:hover { background: #1d2327; }
+  & .notice { background: #202b27; color: #d1dfd8; border-color: #45524e; grid-column: 1 / -1; }
+  @media (max-width: 1200px) {
+    & .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    & .detail-grid { grid-template-columns: 1fr; }
+    & .context-panel { display: block; }
+  }
+  @media (max-width: 760px) {
+    & .toolbar { flex-direction: column; align-items: stretch; padding: 18px; gap: 16px; }
+    & .target-control { max-width: none; }
+    & .month-control { border-top: 1px solid var(--line); padding-top: 16px; }
+    & .month-input input { min-width: 0; width: 100%; text-align: center; }
+    & .target-heading { flex-wrap: wrap; gap: 10px; }
+    & .target-heading h2 { font-size: 16px; }
+    & .target-heading .quiet-pill { margin-left: 54px; }
+    & .target-heading>div:not(.target-avatar) { flex: 1; }
+    & .section-heading { flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+    & .section-heading p { max-width: none; text-align: left; font-size: 11px; }
+    & .metrics { gap: 12px; }
+    & .metric-card { padding: 18px 14px; min-height: 180px; }
+    & .metric-value { font-size: 28px; }
+    & .panel { padding: 20px; }
+    & .comparison-chart { grid-template-columns: 1fr; }
+    & .data-panel { padding: 20px 0 8px; }
+    & .data-panel>.section-heading { padding-inline: 20px; }
+  }
+  @media (max-width: 380px) { & .metrics { grid-template-columns: 1fr; } }
+}
