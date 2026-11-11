@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {runInNewContext} from 'node:vm';
-const source=stripTypeScriptTypes(readFileSync(new URL('../src/scripts/project-plugins.ts',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
+const source=stripTypeScriptTypes(readFileSync(new URL('../src/scripts/prompt-copy.ts',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replace(/export /g,'');
 function harness(){
  const timers=new Map<number,()=>void>();let next=0,active=true,calls=0,focused=0,selected=0;let resolve!:()=>void,reject!:(e:Error)=>void;
  const promise=new Promise<void>((yes,no)=>{resolve=yes;reject=no;});

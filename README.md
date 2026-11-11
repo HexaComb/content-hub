@@ -4,6 +4,7 @@ A private client reporting app. Clients own projects, projects select the metric
 
 ## Current implementation
 
+- Sidebar Skills guide with agent-neutral setup prompts, real tool/scope documentation and explicit authentication, data-sharing and publication boundaries. See [agent workflows](docs/skills.md).
 - Optional project-level SEO and Instagram plugins, separate dashboards and accessible settings/member dialogs. Plugin configuration is available through the UI and MCP; external account connections are not implied.
 
 - Cloudflare Worker with a stateless remote MCP endpoint at `/mcp`.
@@ -34,9 +35,10 @@ Start in **All Projects**, open a project to preview its page, then use **Invite
 
 ## Repository map
 
-- `web/src/pages/`: the five entry pages: client home, admin directory, project, invitation acceptance and OAuth consent.
+- `web/src/pages/`: entry pages for client home, admin directory, project, standalone client pages, invitation acceptance, OAuth consent and Skills.
 - `web/src/components/`: shared shell/navigation and report markup.
 - `web/src/scripts/admin.ts`: client/project directory. `dashboard.ts`: shared client report and admin project preview. `project-invitations.ts`: explicit invitation review.
+- `web/src/scripts/skills-catalog.ts`: reusable workflow catalog and agent setup prompt. `skills.ts`: guide interactions. `prompt-copy.ts`: shared clipboard handling.
 - `src/adminReports.ts` and `src/adminInvitations.ts`: verified administrator reads and invitation actions.
 - `src/portal.ts`: recipient reports and project access. `humanAuth.ts`: Clerk identity verification. `auth.ts`: MCP credential/client checks.
 - `src/workspaces.ts` and `workspaceSchemas.ts`: client/project operations (legacy internal filenames, not another product object).

@@ -1,0 +1,47 @@
+---
+import Shell from '../layouts/Shell.astro';
+import Workspace from '../components/Workspace.astro';
+import {agentWorkflows,workflowGroups,buildSkillsSetupPrompt} from '../scripts/skills-catalog';
+import {metricsMcpEndpoint,musePublicOAuthClientId} from '../scripts/plugin-prompt';
+import '../styles/skills.css';
+---
+<Shell title="Skills">
+  <Workspace area="client" section="skills" heading="Skills for your agent" description="A clear playbook for setting up projects, keeping records accurate and designing client pages.">
+    <section class="skills-intro" aria-labelledby="skills-start">
+      <div>
+        <span class="skills-eyebrow">REUSABLE WORKFLOWS</span>
+        <h2 id="skills-start">Bring the workflow.<br/>Keep the control.</h2>
+        <p>Copy these instructions into an MCP-capable agent. It can turn them into skills if it supports them, or use them as repeatable workflows.</p>
+        <p class="skills-muted">Copying does not install anything, connect an account, change data or grant access.</p>
+      </div>
+      <div class="skills-start-steps">
+        <ol><li><strong>Copy the setup prompt.</strong><span>Start with all workflows or choose one below.</span></li><li><strong>Paste it into your agent.</strong><span>Ask it to save reusable skills in its supported format.</span></li><li><strong>Connect and approve access.</strong><span>Use your own account and only the permissions a task needs.</span></li></ol>
+        <button id="copy-skills-setup" class="admin-button skills-copy-primary" type="button">Copy setup prompt</button>
+        <p id="skills-copy-status" class="skills-copy-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+    <details id="skills-prompt-panel" class="skills-prompt-panel">
+      <summary>Review or manually copy the setup prompt</summary>
+      <label for="skills-setup-prompt">Setup prompt <span id="skills-prompt-label">· All workflows</span></label>
+      <textarea id="skills-setup-prompt" readonly spellcheck="false" rows="14">{buildSkillsSetupPrompt()}</textarea>
+      <button id="reset-skills-prompt" type="button" class="admin-button">Show all workflows</button>
+    </details>
+    <section class="skills-connection" aria-labelledby="skills-connection-title">
+      <h2 id="skills-connection-title">One connection. Explicit permissions.</h2>
+      <dl><div><dt>MCP endpoint</dt><dd><code>{metricsMcpEndpoint}</code></dd></div><div><dt>Muse public client ID</dt><dd><code>{musePublicOAuthClientId}</code><span>For Muse only. No client secret.</span></dd></div></dl>
+      <p>Other agents use their own supported OAuth client. Each user needs an authorized operator account and must approve their own clients and scopes. One connection covers all current and future projects of those selected clients; you do not reconnect for each project. A public client ID is not proof of a working connection.</p>
+      <p class="skills-privacy"><strong>Using Muse?</strong> Review its connector notice that data is used to improve AI at Meta before sharing client information. Use only an agent authorized for that data.</p>
+    </section>
+    <p class="skills-catalog-note">These are documented app capabilities, not a claim about your current permissions. Your agent must verify its actual tool list. Source services such as OpenSEO, Google and Meta require separate authorized connections.</p>
+    {workflowGroups.map(group=><section class="skills-group" aria-labelledby={`skills-${group.id}`}>
+      <div class="skills-group-heading"><h2 id={`skills-${group.id}`}>{group.title}</h2><p>{group.description}</p></div>
+      <div class="skills-grid">{agentWorkflows.filter(workflow=>workflow.group===group.id).map(workflow=><article class="skill-card" id={`skill-${workflow.id}`}>
+        <h3>{workflow.title}</h3><p>{workflow.summary}</p><p class="skill-result"><strong>Result</strong>{workflow.outcome}</p>
+        <details><summary>Steps, tools and permissions</summary><ol>{workflow.steps.map(step=><li>{step}</li>)}</ol><h4>MCP tools</h4><ul class="skill-tools">{workflow.tools.map(tool=><li><code>{tool}</code></li>)}</ul><h4>Permissions when needed</h4><p class="skill-scopes">{workflow.scopes.join(' · ')}</p><p class="skill-boundary">{workflow.guardrail}</p></details>
+        <button type="button" class="admin-button skill-copy" data-workflow={workflow.id} aria-label={`Use ${workflow.title} in the setup prompt`}>Use this skill</button>
+      </article>)}</div>
+    </section>)}
+    <aside class="skills-boundary" aria-labelledby="skills-access"><h2 id="skills-access">Client access stays separate</h2><p>Invite people from the project’s <strong>Manage access</strong> flow. Review the recipient, metrics, expiry and email before sending. Ordinary agent OAuth does not include invitation-send, administrator access or external publishing authority.</p><p>Drafting a page is not publishing it. Publishing changes the private design for existing authorized recipients; it never creates a public share or adds recipients.</p></aside>
+  </Workspace>
+  <script>import '../scripts/skills';</script>
+</Shell>

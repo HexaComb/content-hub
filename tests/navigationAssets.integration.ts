@@ -15,7 +15,7 @@ test('production workspace navigation is external, served, and allowed by the Wo
   env:{ASSETS:{type:'assets'},APP_ORIGIN:{type:'text',value:origin}},
  }}]});
  t.after(() => mf.dispose());
- for (const path of ['/', '/admin/', '/project/']) {
+ for (const path of ['/', '/admin/', '/project/', '/skills/']) {
   const response = await mf.dispatchFetch(origin + path, {headers:{Accept:'text/html'}});
   assert.equal(response.status, 200, path);
   const csp = response.headers.get('Content-Security-Policy') ?? '';
@@ -24,6 +24,16 @@ test('production workspace navigation is external, served, and allowed by the Wo
   assert.ok(!scriptDirective.includes("'unsafe-inline'"), path + ': inline script protection retained');
   const html = await response.text();
   assert.match(html, /id="toggle-navigation"/, path);
+  assert.match(html, /href="\/skills"/, path + ': shared Skills navigation');
+  if(path==='/skills/'){
+   assert.match(html, /Skills for your agent/);
+   assert.match(html, /aria-current="page"[^>]*aria-label="Skills"/);
+   assert.match(html, /<textarea[^>]+id="skills-setup-prompt"[^>]+readonly/);
+   assert.match(html, /https:\/\/content\.unreelviews\.com\/mcp/);
+   assert.match(html, /ZuAE_6drixVcWV1S/);
+   assert.equal((html.match(/class="skill-card"/g)??[]).length,10);
+   assert.ok(!/hexacomb|openseo-[0-9a-f]{8}|sk_live_/i.test(html));
+  }
   const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)];
   let hasNavigation = false;
   for (const [, attributes, body] of scripts) {

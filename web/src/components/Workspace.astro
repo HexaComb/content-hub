@@ -4,8 +4,9 @@ import Icon from './AdminIcon.astro';
 import '../styles/admin.css';
 import '../styles/workspace.css';
 import '../styles/report.css';
-interface Props { area: 'client' | 'admin'; heading: string; description: string; }
-const { area, heading, description } = Astro.props;
+interface Props { area: 'client' | 'admin'; heading: string; description: string; section?: 'reports' | 'skills'; }
+const { area, heading, description, section = 'reports' } = Astro.props;
+const isSkills = section === 'skills';
 const isAdmin = area === 'admin';
 ---
 <div class:list={['admin-app', 'workspace-app', { 'client-app': !isAdmin }]} data-workspace={area}>
@@ -14,23 +15,24 @@ const isAdmin = area === 'admin';
     <p class="navigation-label">Projects</p>
     <nav class="workspace-links" aria-label="Main navigation">
       {isAdmin ? <>
-        <a class="workspace-link is-current" href="/admin" aria-current="page" aria-label="All projects" title="All projects"><Icon name="grid" /><span>All projects</span></a>
+        <a class:list={["workspace-link", {"is-current":!isSkills}]} href="/admin" aria-current={!isSkills ? "page" : undefined} aria-label="All projects" title="All projects"><Icon name="grid" /><span>All projects</span></a>
         <a class="workspace-link" href="/?view=client" aria-label="Client view" title="Client view"><Icon name="chart" /><span>Client view</span></a>
       </> : <>
-        <a class="workspace-link is-current" href="/?view=client" aria-current="page" aria-label="Performance" title="Performance"><Icon name="chart" /><span>Performance</span></a>
+        <a class:list={["workspace-link", {"is-current":!isSkills}]} href="/?view=client" aria-current={!isSkills ? "page" : undefined} aria-label="Performance" title="Performance"><Icon name="chart" /><span>Performance</span></a>
         <a id="admin-link" class="workspace-link" href="/admin" aria-label="Administrator view" title="Administrator view" hidden><Icon name="grid" /><span>Administrator view</span></a>
       </>}
+      <a class:list={["workspace-link", {"is-current":isSkills}]} href="/skills" aria-current={isSkills ? "page" : undefined} aria-label="Skills" title="Skills"><Icon name="book" /><span>Skills</span></a>
     </nav>
     <div class="navigation-note"><Icon name="lock" /><div><strong>Private by design</strong><p>Read-only access to the<br/>work shared with you.</p></div></div>
     <div class="navigation-footer"><span>unreelviews</span><span>Client reporting</span></div>
   </dialog>
   <div class="workspace-body">
     <header class="workspace-topbar">
-      <div class="workspace-location"><button id="toggle-navigation" class="icon-button" aria-label="Collapse sidebar" aria-controls="workspace-navigation" aria-expanded="true"><span class="desktop-navigation-icon"><Icon name="sidebar" /></span><span class="mobile-navigation-icon"><Icon name="menu" /></span></button><a class="mobile-brand" href={isAdmin ? '/admin' : '/'} aria-label="unreel content home"><img src="/images/unreelviews-logo.jpg" width="40" height="40" alt="unreelviews" /></a><span>{isAdmin ? 'Administration' : 'Client portal'}<span class="location-divider">/</span><strong>{isAdmin ? 'Overview' : 'Performance'}</strong></span></div>
-      <div class="admin-account"><span id="identity">{isAdmin ? 'Checking administrator access' : 'Private client portal'}</span><button id="logout" class="admin-button admin-button-quiet" hidden>Sign out</button></div>
+      <div class="workspace-location"><button id="toggle-navigation" class="icon-button" aria-label="Collapse sidebar" aria-controls="workspace-navigation" aria-expanded="true"><span class="desktop-navigation-icon"><Icon name="sidebar" /></span><span class="mobile-navigation-icon"><Icon name="menu" /></span></button><a class="mobile-brand" href={isAdmin ? '/admin' : '/'} aria-label="unreel content home"><img src="/images/unreelviews-logo.jpg" width="40" height="40" alt="unreelviews" /></a><span>{isAdmin ? 'Administration' : 'Client portal'}<span class="location-divider">/</span><strong>{isSkills ? 'Skills' : isAdmin ? 'Overview' : 'Performance'}</strong></span></div>
+      <div class="admin-account"><span id="identity">{isSkills ? 'Agent guides' : isAdmin ? 'Checking administrator access' : 'Private client portal'}</span><button id="logout" class="admin-button admin-button-quiet" hidden>Sign out</button></div>
     </header>
     <main id="main" class="admin-main" tabindex="-1">
-      <section class="admin-heading"><div><h1>{heading}</h1><p>{description}</p></div><span class="admin-access"><Icon name="lock" />Read-only reports</span></section>
+      <section class="admin-heading"><div><h1>{heading}</h1><p>{description}</p></div><span class="admin-access"><Icon name={isSkills ? "book" : "lock"} />{isSkills ? "Agent workflows" : "Read-only reports"}</span></section>
       <slot />
       <footer class="admin-footer"><span>unreel content <span aria-hidden="true">/</span> {isAdmin ? 'Administration' : 'Client portal'}</span><span><Icon name="lock" />{isAdmin ? 'Business changes stay in MCP.' : 'Private by design'}</span></footer>
     </main>
