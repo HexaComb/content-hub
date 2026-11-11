@@ -7,6 +7,7 @@ export default defineConfig({
     name: "content-hub",
     entrypoint: "./src/index.ts",
     compatibilityDate: "2026-11-10",
+    previewUrls: false,
     assets: { runWorkerFirst: true, notFoundHandling: "none" },
     env: {
       DB: bindings.d1({ name: "content-hub", id: "0c416a53-1eef-415b-9e81-db37f818922e" }),
@@ -17,7 +18,12 @@ export default defineConfig({
       RESEND_API_KEY: bindings.secret(),
       RESEND_FROM: bindings.text("content-hub@unreelviews.com"),
       ADMIN_ACCESS_ENABLED: bindings.text("false"),
-      CLERK_AUTH_ENABLED: bindings.text("false"),
+      CLERK_AUTH_ENABLED: bindings.text("true"),
+      // Existing encrypted secret added by the owner; no secret value is in source.
+      CLERK_SECRET_KEY: bindings.secret(),
+      // Public Development-instance configuration for testing only.
+      CLERK_PUBLISHABLE_KEY: bindings.text("pk_test_Z29vZC1maXNoLTM2NjIuY2xlcmsuYWNjb3VudHMuZGV2JA"),
+      CLERK_ISSUER: bindings.text("https://good-fish-3662.clerk.accounts.dev"),
       REQUEST_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 120, period: 60 } }),
     },
     observability: {

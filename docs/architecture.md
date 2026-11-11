@@ -51,7 +51,7 @@ Astro UI, Clerk-verified identity and separate human sessions, read-only target-
 
 ### Invitations implemented; publishing coordination remains
 
-Resend invitations are scoped to one Instagram-account or one-off-project target and frozen metric set, with verified recipient identity and read-only access. Actual sending requires configuration and explicit recipient authorization. Add durable publishing claims and reconciliation before any unattended external consumer is connected. Draft editing, revision/destination-bound approval, scheduling, audits and externally supplied receipts are already in the backend. Keep actual publishing outside Content Hub unless separately requested.
+Resend invitations are scoped to one Instagram-account or one-off-project target and frozen metric set, with verified recipient identity and read-only access. Actual sending requires configuration and explicit recipient authorization. Add durable publishing claims and reconciliation before any unattended external consumer is connected. Draft editing, revision/destination-bound approval, scheduling, audits and externally supplied receipts are already in the backend. Keep actual publishing outside unreel content unless separately requested.
 
 ### Then: reporting and scale
 

@@ -25,7 +25,7 @@ Simply reading a scheduled item must not cause publication or reserve it. Before
 5. Reconciliation after timeout/uncertain results. Do not blindly publish again just because the lease expired. Check the provider result before retrying.
 6. Versioned events recording claims, approvals, cancellations and receipts. Never overwrite an approved post's history.
 
-Content Hub records audits and accepts explicit evidence of completed external publication, but does not currently implement claims/reconciliation or publish anything. Do not attach an unattended publisher until this coordination and its tests exist. Publisher authorization belongs to the external agent's own account and permission policy; read access to Content Hub is not permission to post.
+unreel content records audits and accepts explicit evidence of completed external publication, but does not currently implement claims/reconciliation or publish anything. Do not attach an unattended publisher until this coordination and its tests exist. Publisher authorization belongs to the external agent's own account and permission policy; read access to unreel content is not permission to post.
 
 ## Metrics linked to content
 

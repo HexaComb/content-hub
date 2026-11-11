@@ -19,10 +19,10 @@ An agent must obtain actual user authorization; the boolean is an attestation, n
 - The link uses an unguessable 32-byte token in a URL fragment. `/invite` captures it in memory and immediately removes the fragment. There is no browser token storage, analytics or GET redemption.
 - The recipient signs in with Clerk. The Worker verifies the current session, exact configured issuer/origin and verified primary email. A forwarded invitation alone cannot grant access.
 - Authenticated preview and explicit acceptance require that verified email to match the stored recipient. D1 conditionally binds the invitation to the verified issuer and stable user ID; concurrent acceptance has one winner. Expiry, revocation, inviter authority, target revision and metric mappings are rechecked.
-- No custom email code or Content Hub session cookie is issued. Clerk handles browser login/signout; legacy passwordless routes and cookies cannot authenticate the new flow.
+- No custom email code or unreel content session cookie is issued. Clerk handles browser login/signout; legacy passwordless routes and cookies cannot authenticate the new flow.
 - Invitation lifetime is 48 hours. Approved access expiry is independent. Read permission follows the bound stable identity and the current D1 grant, not a mutable email address.
 
-Clerk onboarding is separate from Content Hub permissions. A recipient without a Clerk account needs an authorized provider invitation/provisioning step in the invite-only instance; this application never automatically creates provider users or invitations. See [Clerk setup](clerk.md).
+Clerk onboarding is separate from unreel content permissions. A recipient without a Clerk account needs an authorized provider invitation/provisioning step in the invite-only instance; this application never automatically creates provider users or invitations. See [Clerk setup](clerk.md).
 
 ## Reporting boundary
 
@@ -37,7 +37,7 @@ Before sharing, ensure each approved metric genuinely describes only its intende
 In Cloudflare **Workers & Pages → content-hub → Settings → Variables and Secrets**:
 
 - Add **RESEND_API_KEY** as a **secret**. Use a Resend sending-only key restricted to the intended verified domain. Enter it directly in Cloudflare, never chat, Git or frontend configuration.
-- Add **RESEND_FROM** as a plain-text variable, using an approved address on the verified domain, such as `Content Hub <reports@example.com>` (example only).
+- Add **RESEND_FROM** as a plain-text variable, using an approved address on the verified domain, such as `unreel content <reports@example.com>` (example only).
 - Keep **APP_ORIGIN** set to the exact HTTPS deployment origin.
 - Keep **INVITATIONS_ENABLED=false** until sender/key setup and an explicitly approved test recipient are ready. Set it to `true` only as an intentional operator enablement.
 

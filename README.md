@@ -1,4 +1,4 @@
-# Content Hub
+# unreel content
 
 An agency workspace for storing client metrics, comparing reporting periods, and making planned content available to authorized agents through MCP.
 
@@ -61,7 +61,7 @@ The database starts empty. `/` is the private portal sign-in, `/invite` accepts 
 | `list_content` | Inspect planned/published content | `content:read` |
 | `get_content` | Retrieve caption, assets and schedule details | `content:read` |
 
-An agent can obtain numbers from OpenSEO or another source, then call `record_observation`. **Content Hub does not connect to OpenSEO.** Likewise, any authorized agent can retrieve scheduled content. A consumer such as Muse would be external; no specific bot is required or integrated.
+An agent can obtain numbers from OpenSEO or another source, then call `record_observation`. **unreel content does not connect to OpenSEO.** Likewise, any authorized agent can retrieve scheduled content. A consumer such as Muse would be external; no specific bot is required or integrated.
 
 ## Design documents
 
@@ -81,3 +81,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 - Service bearer authentication is for controlled agent clients. Human browser login uses Clerk session verification, separate from MCP credentials. Standards-based MCP OAuth discovery/authorization is not implemented.
 - Client/metric discovery has explicit prototype limits (100 clients / 200 metrics). Content listing is paginated.
 - No public report sharing, external data fetching, media downloading, deletion tool or SQL execution tool is exposed.
+
+## Branding and deployment identifiers
+
+The product name is **unreel content**. The GitHub repository, Worker/service name, routes, D1 binding, and existing sender address retain their current `content-hub` identifiers so deployment and integrations keep working. Renaming those external resources is a separate coordinated change.

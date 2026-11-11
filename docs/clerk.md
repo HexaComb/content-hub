@@ -17,7 +17,7 @@ Set server-side configuration in Cloudflare Workers & Pages → content-hub → 
 - `CLERK_SECRET_KEY`: **secret**, from the deliberately selected Clerk application/instance. Never commit or expose it to browser assets.
 - `CLERK_PUBLISHABLE_KEY`: plain-text public configuration for that same instance.
 - `CLERK_ISSUER`: exact HTTPS Clerk Frontend API origin for that instance. It must match the publishable key's decoded instance host.
-- `APP_ORIGIN`: exact HTTPS Content Hub frontend origin.
+- `APP_ORIGIN`: exact HTTPS unreel content frontend origin.
 - `CLERK_AUTH_ENABLED`: initially `false`; enable only after deliberate setup and authorized tests.
 - `ADMIN_ACCESS_ENABLED`: initially `false`, separately enabling only the two explicit verified operator identities.
 
@@ -29,9 +29,9 @@ For production, use an owned custom domain with DNS control and complete Clerk's
 
 Set Clerk **Invite-only** mode (`restricted` in its API), not open public signup. GitHub sign-in may be enabled in the selected Clerk instance; the application still requires its verified primary email, never a GitHub username or unverified profile email. Disable unused enrollment paths and require verified email. These are deliberate account/security settings, not changes made by this code.
 
-Do not use a Clerk domain allowlist to grant administrator status. Only `christian@unreelviews.com` and `marco@hexacombllc.com` are eligible in Content Hub, after verified identity and the admin gate. There is no public admin signup, promotion API, first-user administrator rule, or role inherited from accepting an invitation.
+Do not use a Clerk domain allowlist to grant administrator status. Only `christian@unreelviews.com` and `marco@hexacombllc.com` are eligible in unreel content, after verified identity and the admin gate. There is no public admin signup, promotion API, first-user administrator rule, or role inherited from accepting an invitation.
 
-A Clerk account or Clerk invitation alone never grants Content Hub reporting access. A client must also accept the independently approved D1 invitation for the exact target/metric scope. If the recipient does not yet have a Clerk account, an operator must provision/invite them through the selected Clerk instance as a separate authorized onboarding step. This repository does not automatically create Clerk users or provider invitations.
+A Clerk account or Clerk invitation alone never grants unreel content reporting access. A client must also accept the independently approved D1 invitation for the exact target/metric scope. If the recipient does not yet have a Clerk account, an operator must provision/invite them through the selected Clerk instance as a separate authorized onboarding step. This repository does not automatically create Clerk users or provider invitations.
 
 ## Safe cutover
 
@@ -43,7 +43,7 @@ Clerk sign-in is kept on the page when possible. Invitation tokens remain in mem
 
 ## Email and CSP
 
-Resend sends Content Hub invitation emails using the configured `RESEND_FROM`. Clerk handles authentication/verification email separately. The Resend key does not change Clerk's sender. The chosen setup uses Clerk’s default sender for verification/sign-in and Resend for branded Content Hub invitations. No email webhook or automatic provider invitation is included here.
+Resend sends unreel content invitation emails using the configured `RESEND_FROM`. Clerk handles authentication/verification email separately. The Resend key does not change Clerk's sender. The chosen setup uses Clerk’s default sender for verification/sign-in and Resend for branded unreel content invitations. No email webhook or automatic provider invitation is included here.
 
 CSP permits the exact configured Clerk instance origin plus Clerk's documented narrow `*.protect.clerk.com` abuse-protection namespace, `img.clerk.com`, and `challenges.cloudflare.com`. It does not allow arbitrary HTTPS origins. Clerk's documented protection connections can use nonstandard ports; `worker-src` permits same-origin and blob workers. UI is bundled locally. The invitation bootstrap retains its exact script hash rather than enabling unsafe inline scripts.
 
