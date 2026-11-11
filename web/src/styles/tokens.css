@@ -1,0 +1,32 @@
+/* Shared product chrome. Authored client canvases keep their own project tokens. */
+:root {
+  --ui-bg: #101214;
+  --ui-surface: #171a1d;
+  --ui-raised: #202428;
+  --ui-line: #30363a;
+  --ui-text: #f1efe9;
+  --ui-muted: #a8afb1;
+  --ui-accent: #a6e3cd;
+  --ui-control: #424a4e;
+  --ui-serif: Georgia, 'Times New Roman', serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --ui-radius: 12px;
+}
+html { background: var(--ui-bg); }
+body { color: var(--ui-text); }
+button, a, input, select, summary { touch-action: manipulation; }
+button:disabled { cursor: default; }
+.skip { border-radius: 6px; background: var(--ui-accent); color: var(--ui-bg); z-index: 20; }
+/* An offset frame is the product's recurring mark, not a data visualization. */
+.perspective-mark { width: 112px; height: 88px; position: relative; flex-shrink: 0; color: var(--ui-accent); }
+.perspective-mark::before, .perspective-mark::after { content: ''; position: absolute; width: 76px; height: 56px; border: 1px solid currentColor; }
+.perspective-mark::before { top: 0; left: 0; }
+.perspective-mark::after { right: 0; bottom: 0; color: var(--ui-text); }
+.perspective-mark i { position: absolute; top: 44px; left: 20px; width: 92px; height: 2px; background: currentColor; }

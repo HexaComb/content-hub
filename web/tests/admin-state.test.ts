@@ -13,7 +13,7 @@ test('admin report URLs preserve all three ownership identifiers',()=>{
 });
 test('admin page has no public signup, business mutations, or frontend email allowlist',()=>{
  const source=readFileSync('web/src/scripts/admin.ts','utf8');assert.doesNotMatch(source,/marco@|christian@|innerHTML|method:\s*['"]POST/);assert.match(source,/api\/admin\/overview/);
- const page=readFileSync('web/src/pages/admin.astro','utf8')+readFileSync('web/src/components/Workspace.astro','utf8');assert.match(page,/Read-only/);assert.match(page,/Business changes stay in MCP/);
+ const page=readFileSync('web/src/pages/admin.astro','utf8')+readFileSync('web/src/components/Workspace.astro','utf8');assert.match(page,/Read-only/);assert.match(page,/Private by design/);
 });
 
 test('root routes only a server-confirmed administrator; client view remains explicit',()=>{

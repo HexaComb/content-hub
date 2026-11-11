@@ -65,15 +65,15 @@ export function mountProjectPlugins(target:ProjectRoute,admin:boolean,selected:P
   const nav=el('nav',undefined,'plugin-nav');nav.setAttribute('aria-label','Project dashboards');
   for(const key of [null,...(['seo','instagram'] as const).filter(key=>configuration(key)?.enabled)] as (PluginKey|null)[]){const link=el('a',key?pluginCatalog[key].name:'Project home');link.href=pluginPagePath(target,key??undefined);if(key===selected)link.setAttribute('aria-current','page');nav.append(link);}root.append(nav);
   if(selected){
-   const info=pluginCatalog[selected],head=el('div',undefined,'plugin-title'),copy=el('div');copy.append(el('h2',`${info.name} dashboard`),el('p',info.short));head.append(copy);root.append(head);
+   const info=pluginCatalog[selected],head=el('div',undefined,'plugin-title'),copy=el('div');copy.append(el('p',info.short,'plugin-section-label'));head.append(copy);root.append(head);
    if(configuration(selected)?.enabled&&projectDetails){const prompt=button('Copy current-month prompt',()=>openPrompt(selected,prompt));head.append(prompt);}
    if(canManage){const manage=button(configuration(selected)?.enabled?'Plugin settings':`Add ${info.name}`,()=>openSettings(selected,manage));head.append(manage);}
-   const readiness=el('aside',undefined,'plugin-readiness');readiness.setAttribute('aria-label','Plugin readiness');
+   const readiness=el('details',undefined,'plugin-readiness');readiness.append(el('summary',configuration(selected)?.enabled?'About this dashboard':'Dashboard setup needed'));readiness.open=!configuration(selected)?.enabled;readiness.setAttribute('aria-label','Plugin readiness');
    if(!configuration(selected)?.enabled){readiness.append(el('strong','This plugin has not been added'),el('p',admin?'Add it to choose the project metrics for this dashboard.':'Ask your project administrator to add this plugin.'));}
    else if(selected==='seo'){readiness.append(el('strong','Stored metrics · Updated through MCP'),el('p','This dashboard shows reported values saved to this project. Adding SEO does not create a live connection to OpenSEO or another search provider.'));}
    else{readiness.append(el('strong','Stored content and metrics · Meta is not connected'),el('p','Reels and posts can be tracked here. Scheduling and publication records are stored data, not an automatic publishing service.'));}
    const mappingWarning=pluginMappingWarning(admin,configuration(selected),metrics);
-   if(mappingWarning)readiness.append(el('p',mappingWarning,'plugin-notice'));
+   if(mappingWarning){readiness.open=true;readiness.append(el('p',mappingWarning,'plugin-notice'));}
    root.append(readiness);
   }else{
    const heading=el('div',undefined,'plugin-section-heading');const title=el('div');title.append(el('h2','Choose a dashboard'),el('p','Open SEO or Instagram to view its own metrics and content. Reports are kept separate.'));heading.append(title);

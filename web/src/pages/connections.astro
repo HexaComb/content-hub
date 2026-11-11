@@ -1,18 +1,15 @@
 ---
 import Shell from '../layouts/Shell.astro';
-import Brand from '../components/Brand.astro';
-import '../styles/workspace.css';
-import '../styles/access.css';
+import Workspace from '../components/Workspace.astro';
 import '../styles/connections.css';
 ---
 <Shell title="Connected apps">
-<div class="access-app"><main id="main" class="invite-page connections-page"><Brand />
-<section class="panel invite-card"><h1>Connected apps<span>.</span></h1><p>Review and disconnect apps you authorized. This page cannot add permissions or extend access. It shows workspace authorizations, not whether an app is currently connected. Reconnecting or disconnecting inside the app may retire its tokens before this record expires.</p>
-<p id="connections-status" class="notice" role="status" aria-live="polite">Checking secure sign-in…</p>
-<div id="connections-login" hidden><div id="connections-sign-in" class="clerk-container"></div></div>
-<div id="connections-list"></div><button id="connections-more" class="text-button" type="button" hidden>Load more connections</button>
-<div class="consent-actions"><button id="connections-reload" class="text-button" type="button" hidden>Refresh connections</button><button id="connections-signout" class="text-button" type="button" hidden>Sign out</button></div>
-<a class="back-link" href="/">Back to workspace</a>
-</section></main></div>
+<Workspace area="client" section="connections" heading="Connected apps" description="The apps you’ve authorized. A clear view of who can access your work.">
+  <section class="connections-intro"><h2>Your workspace. Your permission.</h2><p>Review an app’s permissions or disconnect it below. These records show workspace authorization; they do not verify that an app is currently connected.</p></section>
+  <p id="connections-status" class="admin-notice" role="status" aria-live="polite">Checking secure sign-in…</p>
+  <div id="connections-login" class="admin-welcome" hidden><h2>Review your connections</h2><p>Sign in to see the apps you’ve authorized.</p><div id="connections-sign-in" class="clerk-container"></div></div>
+  <div id="connections-list"></div>
+  <div class="connections-actions"><button id="connections-more" class="admin-button" type="button" hidden>Load more connections</button><button id="connections-reload" class="admin-button" type="button" hidden>Refresh connections</button><button id="connections-signout" class="admin-button admin-button-quiet" type="button" hidden>Sign out</button></div>
+</Workspace>
 <script>import '../scripts/connections';</script>
 </Shell>
