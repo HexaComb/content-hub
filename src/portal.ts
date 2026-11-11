@@ -1,5 +1,5 @@
 import { readPublishedPresentation } from './presentations.ts';
-import { filterPresentation } from './presentationSchema.ts';
+import { filterPresentation, type PresentationPlugin } from './presentationSchema.ts';
 import { metricAllowedForPlugin } from './pluginMetrics.ts';
 import { readProjectPlugins, selectPlugin } from './plugins.ts';
 import { readProjectTheme } from './themes.ts';
@@ -70,17 +70,24 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
   const presentation=includePresentation?await readPublishedPresentation(db,target.tenant_id,{clientId,projectId}):undefined;
   // Re-query the exact surviving metric permissions immediately before building
   // the response. An unrelated surviving grant must not keep revoked metrics.
-  const finalAllowed = (await db.prepare(`SELECT DISTINCT pm.metric_id ${targetJoin}
+  const finalAllowed = (await db.prepare(`SELECT DISTINCT pm.metric_id,pp.key AS plugin_key,pp.enabled AS plugin_enabled,pp.metric_ids_json AS plugin_metric_ids ${targetJoin}
     LEFT JOIN json_each(i.metric_ids_json) approved ON 1=1
     LEFT JOIN project_metrics pm ON pm.tenant_id=i.tenant_id AND pm.client_id=i.client_id
       AND pm.project_id=i.project_id AND pm.metric_id=approved.value
+    LEFT JOIN project_plugins pp ON pp.tenant_id=i.tenant_id AND pp.client_id=i.client_id AND pp.project_id=i.project_id
     WHERE ${activeGrant} AND i.tenant_id=? AND i.client_id=? AND i.project_id=?`)
-    .bind(...accessBindings(identity), target.tenant_id, clientId, projectId).all<{metric_id:string|null}>()).results;
+    .bind(...accessBindings(identity), target.tenant_id, clientId, projectId).all<{metric_id:string|null;plugin_key:PresentationPlugin|null;plugin_enabled:number|null;plugin_metric_ids:string|null}>()).results;
   // A null metric row represents an active grant with no remaining mappings;
   // zero rows means no access. Do not await another query after this snapshot.
   if (!finalAllowed.length) throw new PublicError("Reporting target is not available.");
   const allowedIds = new Set(finalAllowed.flatMap(row => row.metric_id === null ? [] : [row.metric_id]));
-  return { ...(presentation?{presentation:{...presentation,document:presentation.document?filterPresentation(presentation.document,allowedIds):null}}:{}), target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)&&(!plugin||(plugin.metricIds.includes(metric.id)&&metricAllowedForPlugin(plugin.key,metric)))).map(metric => {
+  const currentPlugin=plugin?finalAllowed.find(row=>row.plugin_key===plugin.key&&row.plugin_enabled===1):null;
+  if(plugin&&!currentPlugin)throw new PublicError('This project plugin is not enabled.');
+  const currentPluginIds=new Set<string>(currentPlugin?JSON.parse(currentPlugin.plugin_metric_ids!):[]);
+  const visibleDefinitions=definitions.filter(metric=>allowedIds.has(metric.id)&&(!plugin||(currentPluginIds.has(metric.id)&&metricAllowedForPlugin(plugin.key,metric))));
+  const visibleIds=new Set(visibleDefinitions.map(metric=>metric.id));
+  const pages=[...new Set(finalAllowed.filter(row=>row.plugin_enabled===1&&row.plugin_key!==null).map(row=>row.plugin_key!))];
+  return { ...(presentation?{presentation:{...presentation,plugin:plugin?.key??null,pages,document:presentation.document?filterPresentation(presentation.document,visibleIds,plugin?.key):null}}:{}), target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: visibleDefinitions.map(metric => {
     const reading = (period: string) => {
       const row = readings.find(r => r.metric_id === metric.id && r.period_start === period);
       return row ? { value: row.value, quality: row.quality, collectedAt: row.collected_at } : null;

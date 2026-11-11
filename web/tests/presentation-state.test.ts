@@ -43,3 +43,13 @@ test('standalone page has no dashboard assets and only the trusted external scri
  const page=readFileSync(new URL('../src/pages/client.astro',import.meta.url),'utf8');assert.doesNotMatch(page,/Shell|Workspace|Dashboard|images\/|https:\/\//);assert.match(page,/name="robots" content="noindex, nofollow, noarchive"/);assert.match(page,/scripts\/client-presentation/);
  const renderer=readFileSync(new URL('../src/scripts/client-presentation-render.ts',import.meta.url),'utf8');assert.doesNotMatch(renderer,/innerHTML|insertAdjacentHTML|eval\(|new Function|fetch\(|\.src\s*=/);assert.match(renderer,/renderLedger\(ledger,report\)/);
 });
+test('SEO and Instagram routes preserve exact preview and month while rejecting ambiguous plugin selectors',()=>{
+ for(const plugin of ['seo','instagram'] as const){
+  const target={...route,tenantId:'tenant',preview:12,month:'2026-10',plugin};
+  const path=clientPresentationPagePath(target);assert.deepEqual(readClientPresentationRoute(path.split('?')[1]),target);
+  assert.equal(clientPresentationApiPath(target,'2026-10',true),`/api/admin/targets/tenant/client-one/project.one/presentation?month=2026-10&plugin=${plugin}&revision=12`);
+  assert.equal(safeSignInReturn(path,'https://content.example.invalid'),'https://content.example.invalid'+path);
+  assert.equal(clientPresentationBasePath(target,true),'/api/admin/targets/tenant/client-one/project.one');
+ }
+ for(const query of ['plugin=','plugin=twitter','plugin=SEO','plugin=seo&plugin=seo','plugin=seo&plugin=instagram','plugin=instagram%2F..','plugin=instagram&plugin='])assert.equal(readClientPresentationRoute('?client=c&project=p&'+query),null,query);
+});

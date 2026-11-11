@@ -4,10 +4,11 @@ import { requireSuperAdmin } from './admin.ts';
 import { canonicalJson, sha256 } from './domain.ts';
 import { id } from './schemas.ts';
 import { readProjectTheme } from './themes.ts';
+import { readProjectPlugins } from './plugins.ts';
 import { adminReport } from './adminReports.ts';
 import type { HumanIdentity } from './humanAuth.ts';
 import { appOrigin, type InvitationEnv } from './mail.ts';
-import { presentationDocumentSchema, presentationTargetInput, getPresentationInput, validatePresentationInput, savePresentationInput, selectPresentationInput, presentationMetricIds, defaultPresentation, type PresentationDocument, type PresentationView } from './presentationSchema.ts';
+import { presentationDocumentSchema, presentationTargetInput, getPresentationInput, validatePresentationInput, savePresentationInput, selectPresentationInput, presentationMetricIds, defaultPresentation, filterPresentation, type PresentationDocument, type PresentationView } from './presentationSchema.ts';
 
 type Target=z.infer<typeof presentationTargetInput>;
 type RevisionRow={revision:number;operation:'save'|'publish'|'restore';source_revision:number|null;document_json:string;created_at:string};
@@ -46,7 +47,9 @@ export async function getProjectPresentation(db:D1Database,p:Principal,raw:z.inf
  if(input.revision!==undefined&&!selected)throw new PublicError('Presentation revision is not available.');
  const theme=await readProjectTheme(db,p.tenantId,input.clientId,input.projectId);
  const query=new URLSearchParams({tenant:p.tenantId,client:input.clientId,project:input.projectId});
- return {...input,...state,selected:selected?parseStored(selected.document_json):null,starter:defaultPresentation(theme.theme??undefined),schema:z.toJSONSchema(presentationDocumentSchema,{io:'input'}),previewPath:state.draftRevision?`/client?${query}&preview=${state.draftRevision}`:null,clientPath:`/client?${new URLSearchParams({client:input.clientId,project:input.projectId})}`,capabilities:{execution:'Trusted layout/report components only. No scripts, HTML, CSS, URLs or network requests.',media:'Images and logos are not supported. Use text branding; theme.brand.logo must be null.',privacy:'Preview requires verified browser administrator access. URLs grant no access. Recipients see only published designs and their existing report permissions.',limits:'80 nodes, six levels, 48 KiB document, at most 400 report blocks. History lists the latest 50 revisions; exact older revisions remain retrievable.',publishing:'Draft edits and restore do not change the client page. Publish explicitly after private preview. To roll back, restore a historical revision then publish the new draft.',reportDataChanged:false}};
+ const enabledPages=(await readProjectPlugins(db,p.tenantId,input.clientId,input.projectId)).filter(plugin=>plugin.enabled).map(plugin=>plugin.key);
+ const pagePaths=Object.fromEntries(enabledPages.map(plugin=>[plugin,{clientPath:`/client?${new URLSearchParams({client:input.clientId,project:input.projectId,plugin})}`,previewPath:state.draftRevision?`/client?${query}&plugin=${plugin}&preview=${state.draftRevision}`:null}]));
+ return {...input,...state,pagePaths,sharedDesign:true,selected:selected?parseStored(selected.document_json):null,starter:defaultPresentation(theme.theme??undefined),schema:z.toJSONSchema(presentationDocumentSchema,{io:'input'}),previewPath:state.draftRevision?`/client?${query}&preview=${state.draftRevision}`:null,clientPath:`/client?${new URLSearchParams({client:input.clientId,project:input.projectId})}`,capabilities:{sharedPages:'SEO and Instagram client pages use this one project design and revision. Saving remains private; publication updates both pages together. Optional node.page markers select page-specific copy/blocks, never a separate theme.',execution:'Trusted layout/report components only. No scripts, HTML, CSS, URLs or network requests.',media:'Images and logos are not supported. Use text branding; theme.brand.logo must be null.',privacy:'Preview requires verified browser administrator access. URLs grant no access. Recipients see only published designs and their existing report permissions.',limits:'80 nodes, six levels, 48 KiB document, at most 400 report blocks. History lists the latest 50 revisions; exact older revisions remain retrievable.',publishing:'Draft edits and restore do not change the client page. Publish explicitly after private preview. To roll back, restore a historical revision then publish the new draft.',reportDataChanged:false}};
 }
 export async function validateProjectPresentation(db:D1Database,p:Principal,raw:z.infer<typeof validatePresentationInput>){const input=validatePresentationInput.parse(raw);await requirePrincipal(db,p,input,'presentations:read');await validateReferences(db,p.tenantId,input,input.document);return {...input,valid:true,persisted:false,reportDataChanged:false};}
 
@@ -97,11 +100,15 @@ export async function handleAdminPresentationRequest(request:Request,env:Invitat
   catch(error){if(error instanceof PublicError)return Response.json({error:error.message},{status:409});throw error;}
  }
  if(match[4]==='presentation-state')return Response.json(await readPresentationState(env.DB,tenant,input));
+ if([...url.searchParams.keys()].some(key=>!['month','revision','plugin'].includes(key))||['month','revision','plugin'].some(key=>url.searchParams.getAll(key).length>1))throw new PublicError('Unexpected presentation parameters.');
+ const plugin=url.searchParams.has('plugin')?z.enum(['seo','instagram']).parse(url.searchParams.get('plugin')):undefined;
  const revisionParam=url.searchParams.get('revision');
  if(url.searchParams.getAll('revision').length>1||revisionParam!==null&&!/^[1-9]\d{0,15}$/.test(revisionParam))throw new PublicError('Invalid presentation revision.');
  let presentation:PresentationView;
  if(revisionParam!==null){const requested=z.number().int().min(1).max(Number.MAX_SAFE_INTEGER-1).parse(Number(revisionParam));const row=await revision(env.DB,tenant,input,requested);const document=row?parseStored(row.document_json):null;if(!document)throw new PublicError('Presentation revision is not available.');presentation={revision:requested,document,mode:'preview'};}
  else presentation=await readPublishedPresentation(env.DB,tenant,input);
- const report=await adminReport(env.DB,identity,env,tenant,clientId,projectId,url.searchParams.get('month')??new Date().toISOString().slice(0,7));
- return Response.json({...report,presentation});
+ const report=await adminReport(env.DB,identity,env,tenant,clientId,projectId,url.searchParams.get('month')??new Date().toISOString().slice(0,7),plugin);
+ const pages=(await readProjectPlugins(env.DB,tenant,clientId,projectId)).filter(p=>p.enabled).map(p=>p.key);
+ if(plugin&&!pages.includes(plugin))throw new PublicError('This project plugin is not enabled.');
+ return Response.json({...report,presentation:{...presentation,plugin:plugin??null,pages,document:presentation.document?filterPresentation(presentation.document,new Set(report.metrics.map(m=>m.id)),plugin):null}});
 }

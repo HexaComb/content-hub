@@ -49,3 +49,7 @@ To stop a connection immediately at application level, set its `oauth_delegation
 After deployment, verify the exact release, disabled/anonymous failure modes and metadata. Only after approved live consent verify initialize, tools/list and a harmless read. Report live connection separately from local protocol tests.
 
 Official reference: https://github.com/cloudflare/workers-oauth-provider/tree/main/docs
+
+## Connection recovery
+
+A 401 on the consent request means human authentication could not be verified. A 403 is a separate authorization rejection: the account may lack a current OAuth workspace mapping, that mapping may have expired, or the requested scopes may exceed its approved ceiling. Signing in again does not renew a mapping or add permissions. Check its exact approved scope and expiry, obtain any required approval for a renewal, and restart the connection. The consent UI distinguishes these cases without exposing raw provider errors.

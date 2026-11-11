@@ -7,14 +7,14 @@ import {defaultPresentation} from '../../src/presentationSchema.ts';
 import {clientPresentationBasePath,clientPresentationPagePath,presentationMutation,type PresentationReport,type PresentationState} from '../src/scripts/client-presentation-state.ts';
 import {createTestDocument,TestElement,flush,deferred} from './presentation-dom.fixture.ts';
 const source=stripTypeScriptTypes(readFileSync(new URL('../src/scripts/client-presentation-admin.ts',import.meta.url),'utf8').replace(/^import .+;$/gm,'')).replace('export function mountPresentationAdmin','function mountPresentationAdmin')+'\nglobalThis.mount=mountPresentationAdmin;';
-const report:PresentationReport={target:{clientId:'client',projectId:'project',name:'Test project',kind:'one_off_project',status:'active'},month:'2026-10',previousMonth:'2026-09',metrics:[],presentation:{revision:3,document:defaultPresentation(),mode:'preview'}};
+const report:PresentationReport={target:{clientId:'client',projectId:'project',name:'Test project',kind:'one_off_project',status:'active'},month:'2026-10',previousMonth:'2026-09',metrics:[],presentation:{revision:3,document:defaultPresentation(),mode:'preview',plugin:null,pages:['seo','instagram']}};
 const state:PresentationState={revision:3,draftRevision:3,publishedRevision:null,isDraftPublished:false,draft:defaultPresentation(),published:null,history:[{revision:3,operation:'save',createdAt:'2026-11-01T00:00:00Z'},{revision:2,operation:'save',createdAt:'2026-10-31T00:00:00Z'}]};
-function setup(options:{preview?:number;published?:boolean;alreadyPublished?:boolean;api?:(path:string,init:any)=>Promise<any>}={}){
+function setup(options:{plugin?:'seo'|'instagram';preview?:number;published?:boolean;alreadyPublished?:boolean;api?:(path:string,init:any)=>Promise<any>}={}){
  const {document}=createTestDocument(),root=new TestElement('aside');let current=true,reloads=0,denied=0;const commits:any[]=[],requests:any[]=[];
  class ApiError extends Error{status:number;constructor(status:number){super();this.status=status;}}
  const context:any={document,AbortController,crypto,clientPresentationBasePath,clientPresentationPagePath,presentationMutation,ApiError,api:async(path:string,init:any)=>{requests.push({path,body:JSON.parse(init.body)});return options.api?options.api(path,init):{revision:4,operation:path.endsWith('/publish')?'publish':'restore'};}};
  runInNewContext(source,context);
- const dispose=context.mount(root,{clientId:'client',projectId:'project',tenantId:'tenant',preview:options.preview??3,month:'2026-10'},{...report,presentation:{...report.presentation,revision:options.preview??3,mode:options.published?'published':'preview'}},{...state,isDraftPublished:options.alreadyPublished??false},()=>current,(...args:any[])=>commits.push(args),()=>reloads++,()=>denied++);
+ const dispose=context.mount(root,{clientId:'client',projectId:'project',tenantId:'tenant',...(options.plugin?{plugin:options.plugin}:{}),preview:options.preview??3,month:'2026-10'},{...report,presentation:{...report.presentation,revision:options.preview??3,mode:options.published?'published':'preview'}},{...state,isDraftPublished:options.alreadyPublished??false},()=>current,(...args:any[])=>commits.push(args),()=>reloads++,()=>denied++);
  const button=(text:string)=>root.walk().find(node=>node.tagName==='BUTTON'&&node.textContent===text)!;
  return {root,button,requests,commits,dispose,ApiError,setCurrent:(value:boolean)=>{current=value;},reloads:()=>reloads,denied:()=>denied};
 }
@@ -40,4 +40,12 @@ test('session loss and disposal discard late write replies and clear private con
 });
 test('cancel before sending makes no mutation and returns focus to originating control',()=>{
  const s=setup();s.button('Publish exact draft').click();s.button('Cancel').click();assert.equal(s.requests.length,0);assert.equal(s.button('Publish exact draft').disabled,false);assert.equal(s.button('Publish exact draft').focused,true);
+});
+test('both page previews use one project mutation, shared publication disclosure and revision-preserving links',async()=>{
+ for(const plugin of ['seo','instagram'] as const){
+  const s=setup({plugin});assert.match(s.root.textContent,/one shared design and revision/);assert.match(s.root.textContent,/Publishing changes BOTH the SEO and Instagram pages/);
+  for(const link of s.root.walk().filter(node=>node.tagName==='A')){const url=new URL(link.href,'https://example.invalid');assert.equal(url.searchParams.get('plugin'),plugin);assert.equal(url.searchParams.get('month'),'2026-10');}
+  s.button('Publish exact draft').click();assert.match(s.root.textContent,/BOTH the SEO and Instagram client pages/);s.button('Publish revision 3').click();await flush();
+  assert.equal(s.requests[0].path,'/api/admin/targets/tenant/client/project/presentation/publish');assert.equal(s.requests[0].body.sourceRevision,3);
+ }
 });

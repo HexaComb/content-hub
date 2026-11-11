@@ -19,14 +19,14 @@ let targets:Target[]=[];let controller:AbortController|undefined;let generation=
 const month=$<HTMLInputElement>('month');const selector=$<HTMLSelectElement>('target');
 month.value=isProject?previousCompletedMonth():new Date().toISOString().slice(0,7);
 function status(text:string,retry?:()=>void){const box=$('status');box.replaceChildren(document.createTextNode(text));box.hidden=!text;if(retry){const button=document.createElement('button');button.textContent='Try again';button.className='text-button';button.onclick=retry;box.append(' ',button);}}
-function clearReport(){instagramDashboard?.clear();$('client-page-entry').hidden=true;$('open-client-page').removeAttribute('href');$('dashboard').hidden=true;projectPlugins?.clearContent();clearProjectTheme($('dashboard'));document.title=isProject?'Client project':'Performance overview';$('project-breadcrumb').hidden=true;for(const id of ['project-breadcrumb','target-name','target-detail','target-status','target-avatar'])$(id).textContent='';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
+function clearReport(){instagramDashboard?.clear();$('client-page-entry').hidden=true;for(const key of ['seo','instagram'] as const){const link=$('open-client-page-'+key);link.removeAttribute('href');link.removeAttribute('aria-current');link.hidden=true;}$('dashboard').hidden=true;projectPlugins?.clearContent();clearProjectTheme($('dashboard'));document.title=isProject?'Client project':'Performance overview';$('project-breadcrumb').hidden=true;for(const id of ['project-breadcrumb','target-name','target-detail','target-status','target-avatar'])$(id).textContent='';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
 async function loadReport(){controller?.abort();controller=new AbortController();const request=++generation;const target=targets[Number(selector.value)];clearReport();if(!target)return;status('Loading this month’s report…');$('dashboard').setAttribute('aria-busy','true');$('target-name').textContent=target.name;$('target-detail').textContent=`Project${target.platformAccountRef?` · ${target.platformAccountRef}`:''}`;$('target-avatar').textContent=target.kind==='instagram_account'?'◎':'↗';$('target-status').textContent=target.status;
  try{
   let allReport=await api<Report>(projectReportPath(target,month.value,verifiedAdmin),{signal:controller.signal});if(request!==generation)return;
   if(plugin==='instagram'&&!monthChosen){monthChosen=true;const currentMonth=currentReportingPeriod(allReport.target.timezone)?.month;if(currentMonth&&month.value!==currentMonth){month.value=currentMonth;allReport=await api<Report>(projectReportPath(target,month.value,verifiedAdmin),{signal:controller.signal});if(request!==generation)return;}}
-  let report=allReport,enabled=true;
+  let report=allReport,enabled=true,pluginsLoaded=false;
   if(projectPlugins){
-   try{await projectPlugins.load(controller.signal);if(request!==generation)return;projectPlugins.render(allReport.metrics,allReport.target.status,allReport.target);if(plugin&&plugin!=='invalid'){enabled=projectPlugins.isEnabled(plugin);if(enabled)report=await api<Report>(projectReportPath(target,month.value,verifiedAdmin)+'&plugin='+plugin,{signal:controller.signal});}}
+   try{await projectPlugins.load(controller.signal);if(request!==generation)return;pluginsLoaded=true;projectPlugins.render(allReport.metrics,allReport.target.status,allReport.target);if(plugin&&plugin!=='invalid'){enabled=projectPlugins.isEnabled(plugin);if(enabled)report=await api<Report>(projectReportPath(target,month.value,verifiedAdmin)+'&plugin='+plugin,{signal:controller.signal});}}
    catch(error){if(plugin)throw error;if(request!==generation)return;const box=$('project-plugins');box.hidden=false;box.replaceChildren(document.createTextNode('Dashboards could not be loaded. Retry to choose a dashboard. '));const retry=document.createElement('button');retry.className='admin-button';retry.textContent='Retry plugins';retry.onclick=()=>void loadReport();box.append(retry);}
   }
   if(request!==generation)return;const selectedPlugin=plugin&&plugin!=='invalid'?plugin:null;const view=dashboardViewState(isProject,selectedPlugin,enabled,report.metrics.length);
@@ -42,7 +42,12 @@ async function loadReport(){controller?.abort();controller=new AbortController()
   const heading=document.querySelector('.admin-heading h1');if(heading&&isProject)heading.textContent=selectedPlugin?`${pluginCatalog[selectedPlugin].name} dashboard`:report.target.name;
   $('project-preview-label').textContent=selectedPlugin?`Administrator preview · ${pluginCatalog[selectedPlugin].name}`:'Administrator preview · Project home';
   $('project-preview-description').textContent=selectedPlugin?`This dashboard shows only compatible ${pluginCatalog[selectedPlugin].name} metrics. Client recipients see only their approved metrics.`:'Choose a dashboard below. Client recipients see only their approved metrics.';
-  if(isProject){$<HTMLAnchorElement>('open-client-page').href=clientPresentationPagePath({clientId:target.clientId,projectId:target.projectId,...(verifiedAdmin&&target.tenantId?{tenantId:target.tenantId}:{}),month:month.value});$('client-page-entry').hidden=false;}
+  if(isProject&&pluginsLoaded&&(!selectedPlugin||enabled)){
+   let links=0;for(const key of ['seo','instagram'] as const){
+    if(!projectPlugins?.isEnabled(key)||selectedPlugin&&key!==selectedPlugin)continue;
+    const link=$<HTMLAnchorElement>('open-client-page-'+key);link.href=clientPresentationPagePath({clientId:target.clientId,projectId:target.projectId,plugin:key,...(verifiedAdmin&&target.tenantId?{tenantId:target.tenantId}:{}),month:month.value});link.hidden=false;links++;
+   }$('client-page-entry').hidden=!links;
+  }
   $('dashboard').hidden=!view.report;status('');
   if(instagramView){if(instagramDashboard)await instagramDashboard.updateMonth(month.value,controller.signal);}else void projectPlugins?.loadContent();
  }

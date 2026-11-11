@@ -17,6 +17,6 @@ export class TestElement extends EventTarget {
  walk():TestElement[]{return [this,...this.children.flatMap(child=>child.walk())];}
  get validity(){return {valid:true};}reportValidity(){return true;}
 }
-export function createTestDocument(){const elements=new Map<string,TestElement>();const document={title:'',createElement:(tag:string)=>new TestElement(tag),createTextNode:(text:string)=>Object.assign(new TestElement('#text'),{textContent:text}),getElementById:(id:string)=>{if(!elements.has(id))elements.set(id,new TestElement(id==='client-month'?'input':'div'));return elements.get(id)!;}};return {document,elements};}
+export function createTestDocument(){const elements=new Map<string,TestElement>();const document={title:'',createElement:(tag:string)=>new TestElement(tag),createElementNS:(_namespace:string,tag:string)=>new TestElement(tag),createTextNode:(text:string)=>Object.assign(new TestElement('#text'),{textContent:text}),getElementById:(id:string)=>{if(!elements.has(id))elements.set(id,new TestElement(id==='client-month'?'input':'div'));return elements.get(id)!;}};return {document,elements};}
 export const flush=async()=>{for(let index=0;index<12;index++)await Promise.resolve();};
 export function deferred<T>(){let resolve!:(value:T)=>void,reject!:(error:unknown)=>void;const promise=new Promise<T>((res,rej)=>{resolve=res;reject=rej;});return {promise,resolve,reject};}

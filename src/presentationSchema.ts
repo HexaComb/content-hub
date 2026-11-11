@@ -5,15 +5,17 @@ import { projectThemeSchema, themePresets, type ProjectTheme } from './themeSche
 const nodeId=z.string().regex(/^[a-z][a-z0-9_-]{0,39}$/);
 const space=z.enum(['tight','normal','generous']);
 const children=z.array(nodeId).min(1).max(12);
+const page=z.enum(['shared','seo','instagram']).optional();
+export type PresentationPlugin='seo'|'instagram';
 export const presentationNodeSchema=z.discriminatedUnion('type',[
- z.object({id:nodeId,type:z.literal('band'),tone:z.enum(['page','surface','raised','accent']),space,children}).strict(),
- z.object({id:nodeId,type:z.literal('stack'),gap:space,align:z.enum(['left','center','right']),children}).strict(),
- z.object({id:nodeId,type:z.literal('grid'),split:z.enum(['equal','wide-left','wide-right','thirds']),gap:space,children:z.array(nodeId).min(2).max(3)}).strict(),
- z.object({id:nodeId,type:z.literal('text'),role:z.enum(['eyebrow','title','heading','body','caption']),text:z.string().max(1000)}).strict(),
- z.object({id:nodeId,type:z.literal('divider'),style:z.enum(['line','stripes','checker'])}).strict(),
- z.object({id:nodeId,type:z.literal('metric'),metricId:id,variant:z.enum(['statement','stat','inline'])}).strict(),
- z.object({id:nodeId,type:z.literal('comparison'),metricIds:z.array(id).max(8).refine(v=>new Set(v).size===v.length,'Metric references must be unique.')}).strict(),
- z.object({id:nodeId,type:z.literal('metric_collection'),variant:z.enum(['stat','inline'])}).strict(),
+ z.object({id:nodeId,page,type:z.literal('band'),tone:z.enum(['page','surface','raised','accent']),space,children}).strict(),
+ z.object({id:nodeId,page,type:z.literal('stack'),gap:space,align:z.enum(['left','center','right']),children}).strict(),
+ z.object({id:nodeId,page,type:z.literal('grid'),split:z.enum(['equal','wide-left','wide-right','thirds']),gap:space,children:z.array(nodeId).min(2).max(3)}).strict(),
+ z.object({id:nodeId,page,type:z.literal('text'),role:z.enum(['eyebrow','title','heading','body','caption']),text:z.string().max(1000)}).strict(),
+ z.object({id:nodeId,page,type:z.literal('divider'),style:z.enum(['line','stripes','checker'])}).strict(),
+ z.object({id:nodeId,page,type:z.literal('metric'),metricId:id,variant:z.enum(['statement','stat','inline'])}).strict(),
+ z.object({id:nodeId,page,type:z.literal('comparison'),metricIds:z.array(id).max(8).refine(v=>new Set(v).size===v.length,'Metric references must be unique.')}).strict(),
+ z.object({id:nodeId,page,type:z.literal('metric_collection'),variant:z.enum(['stat','inline'])}).strict(),
 ]);
 export type PresentationNode=z.infer<typeof presentationNodeSchema>;
 /** Flat references keep input parsing bounded. The tree is validated, never evaluated. */
@@ -48,9 +50,24 @@ export function defaultPresentation(theme:ProjectTheme=themePresets.studio):Pres
  ]};
 }
 export function presentationMetricIds(doc:PresentationDocument):string[]{return [...new Set(doc.nodes.flatMap(n=>n.type==='metric'?[n.metricId]:n.type==='comparison'?n.metricIds:[]))];}
-/** A published design cannot make excluded metric identifiers available to a recipient. */
-export function filterPresentation(doc:PresentationDocument,allowed:Set<string>):PresentationDocument {
- return {...doc,nodes:doc.nodes.map(n=>n.type==='metric'&&!allowed.has(n.metricId)?{id:n.id,type:'comparison' as const,metricIds:[]}:n.type==='comparison'?{...n,metricIds:n.metricIds.filter(id=>allowed.has(id))}:n)};
+/** Project one shared design into a page without fetching or exposing excluded data.
+ * Missing page markers mean shared, keeping all stored version-one designs valid. */
+export function filterPresentation(doc:PresentationDocument,allowed:Set<string>,plugin?:PresentationPlugin):PresentationDocument {
+ if(!plugin)return {...doc,nodes:doc.nodes.map(n=>n.type==='metric'&&!allowed.has(n.metricId)?{id:n.id,type:'comparison' as const,metricIds:[]}:n.type==='comparison'?{...n,metricIds:n.metricIds.filter(id=>allowed.has(id))}:n)};
+ const byId=new Map(doc.nodes.map(n=>[n.id,n])),nodes:PresentationNode[]=[];
+ const visit=(id:string):string|null=>{
+  const original=byId.get(id)!;
+  if(original.page&&original.page!=='shared'&&original.page!==plugin)return null;
+  let node:PresentationNode=original;
+  if(node.type==='metric'&&!allowed.has(node.metricId))return null;
+  if(node.type==='comparison'){const metricIds=node.metricIds.filter(id=>allowed.has(id));if(!metricIds.length)return null;node={...node,metricIds};}
+  if('children'in node){const children=node.children.map(visit).filter((id):id is string=>id!==null);if(!children.length)return null;node=node.type==='grid'&&children.length===1?{id:node.id,type:'stack',gap:node.gap,align:'left',children}:{...node,children};}
+  nodes.push(node);return node.id;
+ };
+ const sections=doc.sections.map(visit).filter((id):id is string=>id!==null);
+ // Keep a valid bounded document even when no authored blocks match this page.
+ if(!sections.length)return {...doc,sections:['page-empty'],nodes:[{id:'page-empty',type:'metric_collection',variant:'stat'}]};
+ return {...doc,sections,nodes};
 }
 export const presentationTargetInput=z.object({clientId:id,projectId:id}).strict();
 export const getPresentationInput=presentationTargetInput.extend({revision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER-1).optional()}).strict();
@@ -58,4 +75,4 @@ export const validatePresentationInput=presentationTargetInput.extend({document:
 const writeFields={expectedRevision:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER-1),idempotencyKey:z.string().min(8).max(120)};
 export const savePresentationInput=validatePresentationInput.extend(writeFields).strict();
 export const selectPresentationInput=presentationTargetInput.extend({...writeFields,sourceRevision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER-1)}).strict();
-export type PresentationView={revision:number;document:PresentationDocument|null;mode:'published'|'preview'|'default'};
+export type PresentationView={revision:number;document:PresentationDocument|null;mode:'published'|'preview'|'default';plugin?:PresentationPlugin|null;pages?:PresentationPlugin[]};

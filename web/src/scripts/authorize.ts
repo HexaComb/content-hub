@@ -1,6 +1,7 @@
 import {getClerk,mountSignIn} from './auth';
 import {message,ApiError} from './api';
-import {sessionChangeGuard,verificationMessage} from './access-state';
+import {sessionChangeGuard} from './access-state';
+import {consentFailureMessage} from './oauth-errors';
 import {safeSignInReturn,validProposal,consentRedirect,defaultScopeSelected,type ConsentProposal} from './oauth-state';
 const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.querySelector<T>(`#${id}`)!;
 // Preserve the OAuth request, never a user-provided post-login destination or fragment.
@@ -9,7 +10,7 @@ let proposal:ConsentProposal|undefined;let revision=0;let sessionId:string|null=
 let dispose:(()=>void)|undefined;let stop:(()=>void)|undefined;let timer:ReturnType<typeof setTimeout>|undefined;let pending:AbortController|undefined;
 function clear(){proposal=undefined;clearTimeout(timer);$('consent-form').hidden=true;$('consent-scopes').replaceChildren();$('consent-clients').replaceChildren();$('consent-approve').removeAttribute('disabled');$('consent-deny').removeAttribute('disabled');}
 function status(text:string){$('consent-status').textContent=text;}
-function failure(error:unknown){if(error instanceof ApiError){if([401,403].includes(error.status))return verificationMessage;if(error.status===503)return 'Connections are not configured yet. Ask your workspace administrator to finish setting up MCP authorization.';if([400,404,409,410].includes(error.status))return 'This connection request is invalid, expired, or already used. Return to the requesting application and start a new connection.';}return message(error);}
+function failure(error:unknown){return error instanceof ApiError ? consentFailureMessage(error.status)??message(error) : message(error);}
 async function request<T>(method:'GET'|'POST',body?:unknown,signal?:AbortSignal):Promise<T>{
  const clerk=await getClerk();const token=await clerk.session?.getToken();if(!token)throw new ApiError(401);
  const response=await fetch(requestUrl,{method,credentials:'same-origin',cache:'no-store',redirect:'error',signal,headers:{Accept:'application/json','Content-Type':'application/json',Authorization:`Bearer ${token}`},...(body?{body:JSON.stringify(body)}:{})});

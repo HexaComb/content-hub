@@ -28,6 +28,7 @@ import '../styles/client-presentation.css';
           <div><p id="client-business-name" class="cp-kicker"></p><h1 id="client-project-name"></h1><p id="client-project-detail" class="cp-subtle"></p></div>
           <div class="cp-period-controls"><label for="client-month">Reporting month</label><div class="cp-month-row"><button id="client-previous-month" type="button" aria-label="Previous month">←</button><input id="client-month" type="month" min="1000-01" max="9999-12" required /><button id="client-next-month" type="button" aria-label="Next month">→</button></div><a href="#client-ledger">Read the data &amp; methodology ↗</a></div>
         </header>
+        <div class="cp-page-context"><nav id="client-page-navigation" aria-label="Client report pages" hidden></nav><p id="client-design-revision" class="cp-subtle"></p></div>
         <div id="client-canvas"></div>
         <section id="client-ledger" class="cp-ledger" aria-labelledby="client-ledger-heading"></section>
         <footer class="cp-footer"><span>Private report · For authorized viewers</span><span>Presented with unreel content</span></footer>

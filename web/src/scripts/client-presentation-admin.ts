@@ -5,13 +5,13 @@ export function mountPresentationAdmin(root:HTMLElement,route:ClientPresentation
  let disposed=false,busy=false,uncertain=false,pending:PresentationMutation|undefined;const controller=new AbortController();
  const current=()=>!disposed&&isCurrent();root.replaceChildren();root.hidden=false;
  root.append(el('h2',report.presentation.mode==='preview'?`Private design preview · revision ${report.presentation.revision}`:report.presentation.mode==='published'?`Published design · revision ${report.presentation.revision}`:'Default client design'));
- root.append(el('p','Administrator view: this page includes the full project report. Each recipient sees only the metrics already approved for their account. A preview link never grants access.'));
+ root.append(el('p','Administrator view: this page includes the full project report for the selected page. Each recipient sees only the metrics already approved for their account. A preview link never grants access. SEO and Instagram use one shared design and revision.'));
  const tools=el('div',undefined,'cp-admin-tools');const published=el('a','View published design');published.href=clientPresentationPagePath({...route,preview:undefined});tools.append(published);
  if(state.draftRevision!==null){const draft=el('a',`Preview draft ${state.draftRevision}`);draft.href=clientPresentationPagePath({...route,preview:state.draftRevision});tools.append(draft);}
  const publish=el('button','Publish exact draft');publish.type='button';
  const canPublish=state.draft!==null&&state.draftRevision!==null&&!state.isDraftPublished&&route.preview===state.draftRevision&&report.presentation.mode==='preview'&&report.presentation.revision===state.draftRevision;
  publish.disabled=!canPublish;tools.append(publish);root.append(tools);
- root.append(el('p',state.isDraftPublished?'The current draft is already published.':state.draftRevision===null?'No draft has been saved. Create a design through the presentation tools first.':canPublish?'This exact draft is ready for review. Publishing changes the design for existing authorized recipients.':'Open the current draft preview to publish. Historical and published views cannot publish another unseen revision.','cp-admin-muted'));
+ root.append(el('p',state.isDraftPublished?'The current draft is already published.':state.draftRevision===null?'No draft has been saved. Create a design through the presentation tools first.':canPublish?'This exact draft is ready for review. Publishing changes BOTH the SEO and Instagram pages for existing authorized recipients.':'Open the current draft preview to publish. Historical and published views cannot publish another unseen revision.','cp-admin-muted'));
  const historyTools=el('div',undefined,'cp-admin-tools'),label=el('label','Saved revision'),select=el('select');select.setAttribute('aria-label','Saved presentation revision');
  for(const item of state.history){const option=el('option',`Revision ${item.revision} · ${item.operation} · ${item.createdAt}`);option.value=String(item.revision);select.append(option);}label.append(select);historyTools.append(label);
  const preview=el('a','Preview selected revision'),restore=el('button','Restore as draft');restore.type='button';
@@ -23,7 +23,7 @@ export function mountPresentationAdmin(root:HTMLElement,route:ClientPresentation
  const ask=(operation:'publish'|'restore',revision:number)=>{
   if(!current()||busy||pending)return;
   pending=presentationMutation(operation,state,revision,crypto.randomUUID());setLocked(true);confirmation.replaceChildren();confirmation.hidden=false;
-  confirmation.append(el('p',operation==='publish'?`Publish draft revision ${revision} for ${report.target.clientName??report.target.clientId} / ${report.target.name}? This replaces the client page design for everyone already authorized for this project. It does not change their metric access.`:`Restore revision ${revision} as a new private draft for ${report.target.name}? The published client page will stay unchanged until you preview and explicitly publish the new draft.`));
+  confirmation.append(el('p',operation==='publish'?`Publish draft revision ${revision} for ${report.target.clientName??report.target.clientId} / ${report.target.name}? This replaces the shared design on BOTH the SEO and Instagram client pages for everyone already authorized for this project. It does not change their metric access.`:`Restore revision ${revision} as a new private draft for ${report.target.name}? Each published client page will stay unchanged until you preview and explicitly publish the shared draft. Publishing it changes BOTH SEO and Instagram.`));
   const actions=el('div',undefined,'cp-admin-tools'),confirm=el('button',operation==='publish'?`Publish revision ${revision}`:`Restore revision ${revision}`),cancel=el('button','Cancel');confirm.type=cancel.type='button';
   confirm.addEventListener('click',()=>void execute(confirm,cancel));cancel.addEventListener('click',()=>{if(busy)return;if(uncertain){onReload();return;}pending=undefined;confirmation.hidden=true;confirmation.replaceChildren();setLocked(false);(operation==='publish'?publish:restore).focus();});actions.append(confirm,cancel);confirmation.append(actions);confirm.focus();
  };
@@ -34,7 +34,7 @@ export function mountPresentationAdmin(root:HTMLElement,route:ClientPresentation
    const result=await api<{revision:number;operation:string}>(`${clientPresentationBasePath(route,true)}/presentation/${mutation.operation}`,{method:'POST',body:JSON.stringify(mutation.body),signal:controller.signal});
    if(!current())return;
    if(!Number.isSafeInteger(result.revision)||result.operation!==mutation.operation)throw new Error('Unexpected mutation receipt.');
-   feedback.textContent=mutation.operation==='publish'?'The design was published. Loading the published page…':'The revision was restored as a private draft. Loading its exact preview…';pending=undefined;onCommit(mutation.operation,result.revision);
+   feedback.textContent=mutation.operation==='publish'?'The shared design was published for both SEO and Instagram. Loading the published page…':'The revision was restored as a private draft. Loading its exact preview…';pending=undefined;onCommit(mutation.operation,result.revision);
   }catch(error){
    if(!current())return;
    if(error instanceof ApiError&&[401,403,404].includes(error.status)){onAccessLost();return;}

@@ -2,8 +2,10 @@ import {getClerk,mountSignIn} from './auth';
 import {api,ApiError,message} from './api';
 import {resolveWorkspaceAccess,sessionChangeGuard,verificationMessage} from './access-state';
 import {previousCompletedMonth} from './project-state';
-import {readClientPresentationRoute,clientPresentationApiPath,clientPresentationBasePath,clientPresentationPagePath,presentationRequestGuard,validPresentationMonth,type ClientPresentationRoute,type PresentationReport,type PresentationState} from './client-presentation-state';
-import {clearClientPresentation,renderClientPresentation} from './client-presentation-render';
+import {readClientPresentationRoute,clientPresentationApiPath,clientPresentationBasePath,clientPresentationPagePath,presentationRequestGuard,validPresentationMonth,presentationReportMatches,presentationPageLabels,type ClientPresentationRoute,type PresentationReport,type PresentationState} from './client-presentation-state';
+import {clearClientPresentation,renderClientPresentation,renderClientPresentationChooser} from './client-presentation-render';
+import {renderPresentationNavigation} from './client-presentation-navigation';
+import {renderClientInstagramMetrics,selectClientInstagramMetrics,restrictClientInstagramMetrics,type ClientInstagramMetrics} from './client-instagram-metrics';
 import {mountPresentationAdmin} from './client-presentation-admin';
 
 const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -12,7 +14,7 @@ const authGuard=presentationRequestGuard(),reportGuard=presentationRequestGuard(
 let route:ClientPresentationRoute|null=null,verifiedAdmin=false,verifiedSession:string|null=null,signingOut=false;
 let clerk:Awaited<ReturnType<typeof getClerk>>|undefined,controller:AbortController|undefined,stopAuth:(()=>void)|undefined,unmount:(()=>void)|undefined,disposeAdmin:(()=>void)|undefined;
 function status(text:string,retry?:()=>void){const box=$('client-status');box.replaceChildren(document.createTextNode(text));box.hidden=!text;if(retry){const button=document.createElement('button');button.type='button';button.textContent='Try again';button.onclick=retry;box.append(' ',button);}}
-function clearReport(){disposeAdmin?.();disposeAdmin=undefined;admin.replaceChildren();admin.hidden=true;reportSection.hidden=true;reportSection.removeAttribute('aria-busy');clearClientPresentation(canvas,ledger);document.title='Private client report';for(const id of ['client-business-name','client-project-name','client-project-detail'])$(id).textContent='';}
+function clearReport(){const navigation=$('client-page-navigation');navigation.replaceChildren();navigation.hidden=true;$('client-design-revision').textContent='';disposeAdmin?.();disposeAdmin=undefined;admin.replaceChildren();admin.hidden=true;reportSection.hidden=true;reportSection.removeAttribute('aria-busy');clearClientPresentation(canvas,ledger);ledger.hidden=true;document.title='Private client report';for(const id of ['client-business-name','client-project-name','client-project-detail'])$(id).textContent='';}
 function cancelReport(){controller?.abort();controller=undefined;reportGuard.invalidate();clearReport();}
 function activeSession(){return !!verifiedSession&&clerk?.session?.id===verifiedSession&&!signingOut;}
 function changeMonth(next:string){if(!route||!activeSession()||!validPresentationMonth(next))return;route={...route,month:next};history.pushState(null,'',clientPresentationPagePath(route));month.value=next;void loadReport();}
@@ -23,13 +25,27 @@ async function loadReport(){
  const current=()=>reportGuard.current(ticket)&&activeSession()&&verifiedSession===session;
  clearReport();status('Loading your report…');reportSection.setAttribute('aria-busy','true');updateMonthControls();
  try{
+  // Read canonical Instagram observations first. The later presentation response
+  // supplies the final grant/plugin mapping snapshot used to filter every value.
+  const packet=selected.plugin==='instagram'?await api<ClientInstagramMetrics>(`${clientPresentationBasePath(selected,verifiedAdmin)}/plugins/instagram/dashboard?month=${encodeURIComponent(selectedMonth)}`,{signal}).then(selectClientInstagramMetrics):null;
+  if(!current())return;
   const [report,state]=await Promise.all([api<PresentationReport>(clientPresentationApiPath(selected,selectedMonth,verifiedAdmin),{signal}),selected.tenantId?api<PresentationState>(`${clientPresentationBasePath(selected,verifiedAdmin)}/presentation-state`,{signal}):Promise.resolve(null)]);
   if(!current())return;
-  if(report.target.clientId!==selected.clientId||report.target.projectId!==selected.projectId||report.month!==selectedMonth||selected.preview!==undefined&&(report.presentation.mode!=='preview'||report.presentation.revision!==selected.preview))throw new Error('The report did not match the requested project.');
-  renderClientPresentation(canvas,ledger,report,report.presentation.document);
-  $('client-business-name').textContent=report.target.clientName??report.target.clientId;$('client-project-name').textContent=report.target.name;$('client-project-detail').textContent=`${report.target.platformAccountRef?report.target.platformAccountRef+' · ':''}Private monthly report${report.target.status?' · '+report.target.status:''}`;
-  document.title=`${report.target.name} · Private report`;
-  if(selected.tenantId&&state)disposeAdmin=mountPresentationAdmin(admin,{...selected,month:selectedMonth},report,state,current,(operation,revision)=>{
+  if(!presentationReportMatches(report,selected,selectedMonth)||packet&&(packet.month!==selectedMonth||packet.target.clientId!==selected.clientId||packet.target.projectId!==selected.projectId||selected.tenantId&&packet.target.tenantId!==selected.tenantId))throw new Error('The report did not match the requested project, page or revision.');
+  const instagram=packet?restrictClientInstagramMetrics(packet,new Set(report.metrics.map(metric=>metric.id))):null;
+  const choosePage=!selected.plugin&&report.presentation.pages.length>0;
+  if(choosePage)renderClientPresentationChooser(canvas,ledger,report,report.presentation.document);
+  else renderClientPresentation(canvas,ledger,report,report.presentation.document,{canonicalInstagramMetrics:!!instagram});
+  ledger.hidden=choosePage;
+  if(instagram)renderClientInstagramMetrics(canvas,instagram,current);
+  const pageLabel=selected.plugin?presentationPageLabels[selected.plugin]:null;
+  renderPresentationNavigation($('client-page-navigation'),{...selected,month:selectedMonth},report.presentation.pages,current,next=>{
+   if(!current())return;route={...selected,month:selectedMonth,plugin:next};history.pushState(null,'',clientPresentationPagePath(route));void loadReport();
+  });
+  $('client-design-revision').textContent=report.presentation.mode==='default'?'Shared default design · SEO + Instagram':`Shared design · revision ${report.presentation.revision} · SEO + Instagram${report.presentation.mode==='preview'?' · Private preview':''}`;
+  $('client-business-name').textContent=report.target.clientName??report.target.clientId;$('client-project-name').textContent=pageLabel?`${report.target.clientName??report.target.clientId} · ${pageLabel}`:report.target.name;$('client-project-detail').textContent=`${pageLabel?report.target.name+' · ':''}${report.target.platformAccountRef?report.target.platformAccountRef+' · ':''}Private monthly report${report.target.status?' · '+report.target.status:''}${!report.presentation.pages.length?' · No SEO or Instagram pages enabled':''}`;
+  document.title=`${report.target.name} · ${pageLabel??'Private'} report`;
+  if(selected.tenantId&&state&&!choosePage)disposeAdmin=mountPresentationAdmin(admin,{...selected,month:selectedMonth},report,state,current,(operation,revision)=>{
    if(!current())return;route={...selected,month:selectedMonth,preview:operation==='restore'?revision:undefined};history.pushState(null,'',clientPresentationPagePath(route));void loadReport();
   },()=>void loadReport(),()=>void boot());
   reportSection.hidden=false;status('');
