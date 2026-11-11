@@ -39,7 +39,14 @@ export const presentationDocumentSchema=z.object({
  if(expanded>400)issue('Composition exceeds the report-block budget (400).');
 });
 export type PresentationDocument=z.infer<typeof presentationDocumentSchema>;
-export function defaultPresentation(theme:ProjectTheme=themePresets.studio):PresentationDocument {
+export const workspaceReportTheme:ProjectTheme = {
+ ...themePresets.studio,
+ name:'In perspective',
+ colors:{background:'#101214',surface:'#171a1d',raised:'#202428',text:'#f1efe9',muted:'#a8afb1',accent:'#a6e3cd',border:'#30363a'},
+ typography:{heading:'editorial',body:'sans'},
+ brand:{eyebrow:'YOUR WORK, IN PERSPECTIVE',tagline:'A clear view of your performance and progress.',logo:null},
+};
+export function defaultPresentation(theme:ProjectTheme=workspaceReportTheme):PresentationDocument {
  return {schemaVersion:1,name:'Client report',theme,width:'wide',sections:['intro','facts'],nodes:[
   {id:'intro',type:'band',tone:'page',space:'generous',children:['eyebrow','title','tagline']},
   {id:'eyebrow',type:'text',role:'eyebrow',text:theme.brand.eyebrow||'YOUR MONTH IN FOCUS'},

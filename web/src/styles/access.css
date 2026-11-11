@@ -1,16 +1,31 @@
-.access-app { min-height: 100dvh; background: #101214; color: #edf1f3; color-scheme: dark; --ink: #edf1f3; --muted: #a0a9b2; --line: #2b3035; --green: #8de0cd; }
-.access-app .app-brand { justify-content: center; margin-bottom: 28px; }
-.access-app .invite-page { padding-block: 36px; }
-.access-app .invite-card { background: #171a1d; border-color: var(--line); }
-.access-app h1 { font-size: 32px; line-height: 1.2; letter-spacing: -.8px; }
-.access-app h1 span { color: #8de0cd; }
-.access-app :is(.invite-card>p,.small,.scope-box p,.invite-footnote) { color: var(--muted); font-size: 12px; line-height: 1.7; }
-.access-app .scope-box { background: #202428; }
-.access-app .notice { background: #202b27; color: #d1dfd8; border-color: #45524e; }
-.access-app .primary { background: #8de0cd; color: #101214; font-size: 13px; min-height: 44px; }
-.access-app .primary:hover { background: #b4efdf; }
-.access-app :is(.text-button,.back-link) { color: #8de0cd; min-height: 44px; padding-block: 12px; }
-.access-app :is(button,a,input):focus-visible { outline-color: #8de0cd; }
-.access-app .consent-choice { padding-block: 8px; min-height: 44px; }
-.access-app .consent-choice input { accent-color: #8de0cd; }
-.access-app .eyebrow { display: none; }
+.access-app { min-height: 100dvh; background: var(--ui-bg); color: var(--ui-text); color-scheme: dark; --ink: var(--ui-text); --muted: var(--ui-muted); --line: var(--ui-line); --green: var(--ui-accent); }
+.access-app .app-brand { justify-content: flex-start; margin-bottom: 48px; }
+.access-app .invite-page { max-width: 800px; padding: 48px 32px; }
+.access-app .invite-card { position: relative; background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 12px; padding: 48px; }
+.access-app .invite-card::before { content: ''; position: absolute; top: -1px; left: 48px; width: 64px; height: 2px; background: var(--ui-accent); }
+.access-app h1 { font: 500 clamp(36px, 4vw, 52px)/1.12 Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -1.8px; margin-bottom: 24px; }
+.access-app h1 span { color: var(--ui-accent); }
+.access-app .eyebrow { display: block; font: 10px/1.6 ui-monospace, monospace; color: var(--ui-accent); letter-spacing: .12em; margin-bottom: 24px; }
+.access-app :is(.invite-card>p, .scope-box p) { color: var(--ui-muted); font-size: 14px; line-height: 1.8; margin-bottom: 24px; }
+.access-app .small { color: var(--ui-muted); font-size: 12px !important; line-height: 1.8; }
+.access-app .scope-box { padding: 24px; margin: 32px 0; border: 1px solid var(--ui-line); border-radius: 8px; background: var(--ui-bg); }
+.access-app .scope-box strong { font-size: 14px; font-weight: 500; }
+.access-app .scope-box p { margin: 8px 0 0; font-size: 13px; }
+.access-app .notice { background: #20312b; color: #d6e7df; border: 1px solid #405b4e; padding: 20px 24px; font-size: 13px; }
+.access-app .primary { background: var(--ui-accent); color: var(--ui-bg); font-size: 14px; font-weight: 600; min-height: 48px; border-radius: 6px; padding: 12px 20px; }
+.access-app .primary:hover { background: #c7efdf; }
+.access-app :is(.text-button, .back-link) { color: var(--ui-accent); min-height: 44px; padding-block: 12px; font-size: 13px; }
+.access-app .back-link { border-top: 1px solid var(--ui-line); padding-top: 24px; margin-top: 24px; }
+.access-app :is(button, a, input, select, summary):focus-visible { outline-color: var(--ui-accent); }
+.access-app .consent-choice { padding-block: 8px; min-height: 44px; font-size: 14px; line-height: 1.7; letter-spacing: 0; }
+.access-app .consent-choice input { accent-color: var(--ui-accent); }
+.access-app .consent-page fieldset { padding: 24px; border-color: var(--ui-control); border-radius: 8px; margin: 32px 0; }
+.access-app .invite-footnote { font: italic 18px/1.5 var(--ui-serif); color: var(--ui-muted); margin: 32px 0 0; }
+@media (max-width: 600px) {
+ .access-app .invite-page { padding: 32px 16px; }
+ .access-app .app-brand { margin-bottom: 32px; }
+ .access-app .invite-card { padding: 32px 24px; }
+ .access-app .invite-card::before { left: 24px; }
+ .access-app .scope-box, .access-app .consent-page fieldset { padding: 20px; }
+ .access-app h1 { font-size: 36px; letter-spacing: -1px; }
+}

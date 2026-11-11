@@ -75,3 +75,9 @@ See [the UX audit](../docs/ux-audit.md) for findings, fixes and verification lim
 ### Reporting layout
 
 Monthly report cards show the selected value and a labeled previous-month baseline before the change. Default reports and Instagram share charcoal surfaces, restrained mint accents, readable supporting labels and full-width KPI cards below 420px. Instagram range controls are grouped; daily source data remains expandable. Default report CSS stays outside saved project themes; Instagram colors inherit project tokens when present.
+
+### In perspective redesign
+
+The shared workspace now includes Connected apps, grouped navigation, an editorial page header and a consistent spacing rhythm. The project directory filters already loaded entries locally; its search count is explicit and load-more pagination remains available. Dashboard source/setup explanations use native details disclosures. Skills offers category links and collapsible connection details. Access pages and standalone client chrome share the dark palette; the uncustomized client presentation default is now dark while saved themes remain authoritative.
+
+`SocialMeta.astro` is used by both HTML layouts and serves the same brand-only OpenGraph/Twitter card for every route. `/images/unreel-content-og.png` is public static branding; report data and URL credentials never enter metadata. The image dimensions declared in metadata match the actual PNG (1731 × 909). See `DESIGN.md` for palette, spacing, responsive behavior and verification limits.

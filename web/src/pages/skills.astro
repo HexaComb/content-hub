@@ -26,13 +26,14 @@ import '../styles/skills.css';
       <textarea id="skills-setup-prompt" readonly spellcheck="false" rows="14">{buildSkillsSetupPrompt()}</textarea>
       <button id="reset-skills-prompt" type="button" class="admin-button">Show all workflows</button>
     </details>
-    <section class="skills-connection" aria-labelledby="skills-connection-title">
-      <h2 id="skills-connection-title">One connection. Explicit permissions.</h2>
+    <details class="skills-connection" aria-labelledby="skills-connection-title">
+      <summary id="skills-connection-title">Connection details &amp; permissions</summary>
       <dl><div><dt>MCP endpoint</dt><dd><code>{metricsMcpEndpoint}</code></dd></div><div><dt>Muse public client ID</dt><dd><code>{musePublicOAuthClientId}</code><span>For Muse only. No client secret.</span></dd></div></dl>
       <p>Other agents use their own supported OAuth client. Each user needs an authorized operator account and must approve their own clients and scopes. One connection covers all current and future projects of those selected clients; you do not reconnect for each project. A public client ID is not proof of a working connection.</p>
       <p class="skills-privacy"><strong>Using Muse?</strong> Review its connector notice that data is used to improve AI at Meta before sharing client information. Use only an agent authorized for that data.</p>
-    </section>
+    </details>
     <p class="skills-catalog-note">These are documented app capabilities, not a claim about your current permissions. Your agent must verify its actual tool list. Source services such as OpenSEO, Google and Meta require separate authorized connections.</p>
+    <nav class="skills-index" aria-label="Workflow categories">{workflowGroups.map(group=><a href={`#skills-${group.id}`}>{group.title} ↗</a>)}</nav>
     {workflowGroups.map(group=><section class="skills-group" aria-labelledby={`skills-${group.id}`}>
       <div class="skills-group-heading"><h2 id={`skills-${group.id}`}>{group.title}</h2><p>{group.description}</p></div>
       <div class="skills-grid">{agentWorkflows.filter(workflow=>workflow.group===group.id).map(workflow=><article class="skill-card" id={`skill-${workflow.id}`}>

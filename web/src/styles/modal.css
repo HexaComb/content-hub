@@ -1,4 +1,10 @@
 .admin-modal {
+  --admin-text: var(--ui-text);
+  --admin-muted: var(--ui-muted);
+  --admin-border: var(--ui-line);
+  --admin-surface: var(--ui-surface);
+  --admin-bg: var(--ui-bg);
+  --admin-accent: var(--ui-accent);
   box-sizing: border-box;
   width: min(720px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
@@ -24,16 +30,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 24px;
+  padding: 24px 32px;
   background: var(--admin-surface, #1c2024);
   border-bottom: 1px solid var(--admin-border, #394148);
 }
-.admin-modal-header h2 { margin: 0; font-size: 20px; }
+.admin-modal-header h2 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.5px; }
 .admin-modal-close { flex-shrink: 0; min-height: 44px; }
-.admin-modal-content { padding: 24px; }
+.admin-modal-content { padding: 32px; }
 .admin-modal .invitation-panel { border: 0; padding: 0; margin: 0; background: transparent; }
 .admin-modal :is(input, select, textarea) { box-sizing: border-box; max-width: 100%; }
-.admin-modal :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #9ccfff; outline-offset: 3px; }
+.admin-modal :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
 .admin-modal button:disabled { opacity: .5; cursor: not-allowed; }
 body:has(.admin-modal[open]) { overflow: hidden; }
 @media (max-width: 480px) {

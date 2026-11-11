@@ -19,7 +19,7 @@ test('missing project references and recipient-pruned comparisons reveal no IDs'
 test('invalid trees and theme injection fall back without executing or fetching content',()=>{
  const invalid={...defaultPresentation(),script:'fetch("https://bad.invalid")'};const fallback=resolvePresentationDocument(invalid,report);assert.equal(fallback.name,'Client report');assert.doesNotMatch(render(invalid).canvas.textContent,/bad.invalid/);
  const badTheme={...report,appearance:{revision:1,updatedAt:null,theme:{...themePresets.night,colors:{...themePresets.night.colors,text:'url(javascript:evil)'}}}} as Report;
- assert.equal(resolvePresentationDocument(null,badTheme).theme.name,themePresets.studio.name);
+ assert.equal(resolvePresentationDocument(null,badTheme).theme.name,'In perspective');
 });
 test('design transitions clear prior copy, theme attributes and private data',()=>{
  const {document}=createTestDocument(),canvas=new TestElement('div'),ledger=new TestElement('section');const before=globalThis.document;Object.assign(globalThis,{document});

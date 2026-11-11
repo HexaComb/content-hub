@@ -4,7 +4,7 @@ import AdminIcon from '../components/AdminIcon.astro';
 import Workspace from '../components/Workspace.astro';
 ---
 <Shell title="Administrator overview">
-<Workspace area="admin" heading="All projects" description="Your clients, projects and performance. One clear view.">
+<Workspace area="admin" heading="All projects" description="Every client. Every project. A clearer view of the work.">
       <div id="status" class="admin-notice" role="status" aria-live="polite">Checking administrator access…</div>
       <section id="welcome" class="admin-welcome" hidden><h2>Administrator sign-in</h2><p>Use your existing authorized account. Signing in does not grant administrator access.</p><div id="clerk-sign-in" class="clerk-container"></div></section>
       <div id="admin-workspace" hidden>
@@ -13,9 +13,10 @@ import Workspace from '../components/Workspace.astro';
         </section>
         <section class="admin-directory" aria-labelledby="directory-title">
           <div class="admin-directory-heading"><div><h2 id="directory-title">Project directory</h2><p id="summary"></p></div><button id="refresh" class="admin-button"><AdminIcon name="refresh" />Refresh</button></div>
-          <div id="empty" class="admin-notice" hidden></div>
+          <div class="directory-tools"><div class="directory-search"><label for="project-search">Find a project or client</label><input id="project-search" type="search" placeholder="Search loaded projects…" autocomplete="off" /></div><p id="search-summary" role="status" aria-live="polite"></p></div>
+          <div id="empty" class="admin-notice" hidden></div><p id="search-empty" class="directory-no-results" hidden>No matching projects in this list. Try another search or load more projects.</p>
           <div class="admin-table-scroll" tabindex="0" role="region" aria-label="All clients and projects, horizontally scrollable"><table class="admin-table"><thead><tr><th scope="col">Project</th><th scope="col">Client</th><th scope="col">Status</th><th scope="col"><span class="admin-sr-only">Report</span></th></tr></thead><tbody id="project-rows"></tbody></table></div>
-          <div class="admin-directory-footer"><span>Includes active, paused, completed and archived projects.</span><button id="load-more" class="admin-button admin-button-quiet" hidden>Load more projects</button></div>
+          <div class="admin-directory-footer"><span>Read-only directory · Includes all project statuses.</span><button id="load-more" class="admin-button admin-button-quiet" hidden>Load more projects</button></div>
         </section>
 
       </div>

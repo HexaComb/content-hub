@@ -40,3 +40,24 @@
 .plugin-prompt {width:100%;max-width:100%;min-height:220px;resize:vertical;border:1px solid #414a51;border-radius:8px;background:#101315;color:#edf1f3;padding:14px;font:12px/1.7 ui-monospace,monospace;}
 .plugin-title {flex-wrap:wrap;}
 .plugin-title > div {flex:1 1 240px;}
+
+/* Project navigation and controls share the workspace's spacing rhythm. */
+.project-plugins { margin: 32px 0; }
+.plugin-nav { margin: 0 0 24px; padding-bottom: 0; gap: 24px; }
+.plugin-nav a { border-radius: 0; padding: 12px 0 16px; border-bottom: 2px solid transparent; }
+.plugin-nav a[aria-current="page"] { color: var(--admin-accent); background: transparent; border-bottom-color: var(--admin-accent); box-shadow: none; }
+.plugin-title { align-items: center; margin: 0 0 24px; gap: 12px; }
+.plugin-title .plugin-section-label { font-size: 14px; color: var(--admin-muted); margin: 0; }
+.plugin-title > div { flex-basis: 180px; }
+.plugin-readiness { margin: 0 0 24px; padding: 0; border: 0; }
+.plugin-readiness summary { cursor: pointer; font-size: 12px; color: var(--admin-muted); min-height: 44px; padding: 12px 0; }
+.plugin-readiness[open] { padding: 0 24px 24px; border: 1px solid var(--admin-border); border-radius: 8px; }
+.plugin-readiness[open] summary { margin-bottom: 12px; }
+.plugin-grid { gap: 24px; }
+.plugin-card { padding: 32px; gap: 24px; border-color: var(--admin-border); }
+.plugin-card h3 { font-size: 26px; font-weight: 500; letter-spacing: -.6px; }
+.plugin-card .plugin-icon { background: transparent; color: var(--admin-accent); border-color: var(--ui-control); border-radius: 6px; }
+.plugin-card[data-plugin="instagram"] .plugin-icon { background: transparent; color: var(--admin-accent); border-color: var(--ui-control); }
+.plugin-card .quiet-pill { color: var(--admin-muted); border-color: var(--admin-border); }
+.plugin-card .plugin-actions { border-top: 1px solid var(--admin-border); padding-top: 24px; width: 100%; justify-content: space-between; }
+@media (max-width: 600px) { .plugin-card { padding: 24px; } .plugin-nav { gap: 16px; } .plugin-title { align-items: stretch; } .plugin-title > div { flex-basis: 100%; } .plugin-title button { flex: 1; white-space: normal; } }
