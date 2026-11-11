@@ -1,3 +1,4 @@
+import { adminAccessEnabled, isSuperAdminEmail } from './admin.ts';
 import { authorize, PublicError, type Principal } from './auth.ts';
 import { canonicalJson, sha256 } from './domain.ts';
 import { appOrigin, invitationMail, type InvitationEnv, type MailTransport } from './mail.ts';
@@ -88,7 +89,7 @@ export async function handleInvitationRequest(request:Request,env:InvitationEnv,
    if(typeof input.email!=='string'||input.email.length>254||!input.email.includes('@')||Object.keys(input).some(k=>k!=='email'))return;
    const email=input.email.trim().toLowerCase(),time=now();
    const access=await db.prepare(`SELECT 1 FROM (SELECT ? AS email) c WHERE ${liveGrant}`).bind(email,time).first();
-   if(!access)return;
+   if(!access && !(adminAccessEnabled(env) && isSuperAdminEmail(email)))return;
    const hash=await sha256(challenge),code=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>x.toString(16).padStart(2,'0')).join('');
    const result=await db.prepare(`INSERT INTO login_challenges(token_hash,email,code_hash,created_at,expires_at) SELECT ?,?,?,?,? WHERE (SELECT count(*) FROM login_challenges WHERE email=? AND created_at>?)<3`).bind(hash,email,await sha256(challenge+':'+code),time,expiry(600000),email,new Date(Date.now()-3600000).toISOString()).run();
    if(!result.meta.changes)return;
@@ -103,7 +104,7 @@ export async function handleInvitationRequest(request:Request,env:InvitationEnv,
   const hash=await sha256(challenge),time=now(),operation=crypto.randomUUID(),token=randomToken(),tokenHash=await sha256(token);
   await db.batch([
    db.prepare('UPDATE login_challenges SET attempts=attempts+1 WHERE token_hash=? AND consumed_at IS NULL AND attempts<=5').bind(hash),
-   db.prepare(`UPDATE login_challenges AS c SET consumed_at=?,redemption_id=? WHERE c.token_hash=? AND c.code_hash=? AND c.attempts<=5 AND c.consumed_at IS NULL AND c.expires_at>? AND c.delivery_state IN ('accepted','uncertain') AND ${liveGrant}`).bind(time,operation,hash,await sha256(challenge+':'+input.code),time,time),
+   db.prepare(`UPDATE login_challenges AS c SET consumed_at=?,redemption_id=? WHERE c.token_hash=? AND c.code_hash=? AND c.attempts<=5 AND c.consumed_at IS NULL AND c.expires_at>? AND c.delivery_state IN ('accepted','uncertain') AND (${liveGrant} OR (?=1 AND c.email IN ('christian@unreelviews.com','marco@hexacombllc.com')) )`).bind(time,operation,hash,await sha256(challenge+':'+input.code),time,time,adminAccessEnabled(env)?1:0),
    db.prepare('INSERT INTO human_sessions(token_hash,email,expires_at) SELECT ?,email,? FROM login_challenges WHERE redemption_id=?').bind(tokenHash,expiry(12*3600000),operation),
   ]);
   const session=await db.prepare('SELECT email FROM human_sessions WHERE token_hash=?').bind(tokenHash).first<{email:string}>();

@@ -51,3 +51,5 @@ Build with `npm run build`. Upload the Worker bundle and static files in the Clo
 The checked-in gate is `INVITATIONS_ENABLED=false`. For manual setup instructions and exact secret/variable names, see [invitations](invitations.md). Preserve server-only secrets across deployments; never put them in static build assets.
 
 Automatic main-branch deployment is not established by this repository alone. It requires the Git connection and an explicitly authorized dedicated build credential. A manual deployment is not evidence that CI is configured.
+
+The separate `ADMIN_ACCESS_ENABLED` gate defaults to false. Only the two explicit operators in the server-side allowlist can qualify after verified email authentication. Do not add public signup, domain-wide matching, a client-controlled role claim, or promotion via invitations. Configure live access only through an approved operator flow.

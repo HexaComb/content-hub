@@ -8,6 +8,7 @@ An agency workspace for storing client metrics, comparing reporting periods, and
 - Cloudflare D1 schema with tenant and client boundaries.
 - Static Astro client portal, target/month selection, private metric comparisons and a clearly synthetic `/demo`.
 - Target-scoped invitations, passwordless recipient verification and Resend transport (disabled until configured).
+- Fail-closed super-admin eligibility for the two explicitly named operators only, requiring verified sessions and separate enablement. No public admin signup or promotion.
 - Arbitrary metric definitions and numeric observations. Instagram and SEO are categories, not hardcoded tables.
 - Source attribution, collection timestamps, missing/partial data, idempotent ingestion and append-only corrections.
 - Month-over-month comparisons using exact supplied monthly periods.

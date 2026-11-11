@@ -106,6 +106,8 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
     assert.equal(session.headers.get("Referrer-Policy"), "no-referrer");
     assert.ok(session.headers.get("Content-Security-Policy")?.includes("frame-ancestors 'none'"));
     assert.equal((await mf.dispatchFetch("https://example.test/api/targets")).status, 401);
+    assert.equal((await mf.dispatchFetch("https://example.test/api/admin/session")).status, 401);
+    assert.equal((await mf.dispatchFetch("https://example.test/api/admin/signup", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:"christian@unreelviews.com",role:"super_admin"})})).status, 405);
     assert.equal((await mf.dispatchFetch("https://example.test/api/targets/client/guessed/report?month=2026-10")).status, 401);
     const login = await mf.dispatchFetch("https://example.test/api/login/begin", { method: "POST", headers: { Origin: "https://example.test", "Content-Type": "application/json" }, body: JSON.stringify({email:"synthetic@example.invalid"}) });
     assert.equal(login.status, 503);

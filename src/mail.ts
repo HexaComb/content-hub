@@ -1,4 +1,4 @@
-export type InvitationEnv = { DB: D1Database; APP_ORIGIN?: string; INVITATIONS_ENABLED?: string; RESEND_FROM?: string; RESEND_API_KEY?: string };
+export type InvitationEnv = { DB: D1Database; APP_ORIGIN?: string; ADMIN_ACCESS_ENABLED?: string; INVITATIONS_ENABLED?: string; RESEND_FROM?: string; RESEND_API_KEY?: string };
 export type MailMessage = { to: string; subject: string; text: string; idempotencyKey: string };
 export type MailTransport = { send(message: MailMessage): Promise<{ id: string }> };
 export function appOrigin(env: InvitationEnv): string {

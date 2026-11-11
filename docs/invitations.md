@@ -52,3 +52,11 @@ Tests cover tenant/target isolation, frozen scopes, partial revocation during a 
 Before real client use: approve/provision service credentials, review shareable data, verify sender domain, run an authorized end-to-end delivery check, add upstream abuse controls, define cleanup/retention for expired challenges and rate-limit buckets, and test backup/restore. Public report links, exports, admin UI, delivery webhooks, and automatic publishing are not implemented.
 
 References: [Resend send API](https://resend.com/docs/api-reference/emails/send-email), [restricted keys](https://resend.com/docs/api-reference/api-keys/create-api-key).
+
+## Super-admin boundary
+
+Only `christian@unreelviews.com` and `marco@hexacombllc.com` are eligible for super-admin authorization. Eligibility alone is not authentication: a matching email typed in a form never grants access. The server requires a live, email-verified session and the separately controlled `ADMIN_ACCESS_ENABLED=true` gate. That gate defaults to false.
+
+There is no public admin registration, invitation-to-admin conversion, promotion, role-edit, domain-wide wildcard, or arbitrary admin-list endpoint. Names, email-domain matches and caller-supplied role claims confer no privilege. Current authorization is calculated server-side on each request; expired/revoked sessions fail closed. Invited clients keep exact target/metric viewer access and never become administrators by accepting an invitation.
+
+This establishes the admin authorization boundary, not an administrative CRUD interface. All business-data writes remain through separately authorized MCP service principals. No real admin session, service credential or recipient access is bootstrapped by code or migration. Enabling admin authentication and provisioning service credentials remain deliberate operator actions.

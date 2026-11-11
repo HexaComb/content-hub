@@ -13,6 +13,7 @@ export default defineConfig({
       ASSETS: bindings.assets(),
       APP_ORIGIN: bindings.text("https://content-hub.marcode-chavez-jr.workers.dev"),
       INVITATIONS_ENABLED: bindings.text("false"),
+      ADMIN_ACCESS_ENABLED: bindings.text("false"),
       REQUEST_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 120, period: 60 } }),
     },
     observability: {

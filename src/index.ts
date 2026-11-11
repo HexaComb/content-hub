@@ -14,6 +14,7 @@ import { invitations, handleInvitationRequest } from "./invitations.ts";
 import { prepareInvitationInput, sendInvitationInput, listInvitationsInput, revokeInvitationInput } from "./invitationSchemas.ts";
 import { getSession, portalTargets, portalReport } from "./portal.ts";
 import type { InvitationEnv } from "./mail.ts";
+import { getAdminSession } from "./admin.ts";
 
 export type Env = InferEnv<UnwrapConfig<typeof config.worker>> & InvitationEnv;
 const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -86,6 +87,10 @@ export default {
         const session = await getSession(env.DB, request);
         if (url.pathname === "/api/session") return secureResponse(Response.json(session ? { authenticated: true, email: session.email } : { authenticated: false }), true);
         if (!session) return secureResponse(Response.json({ error: "Sign in to continue." }, { status: 401 }), true);
+        if (url.pathname === "/api/admin/session") {
+          const admin = await getAdminSession(env.DB, request, env);
+          return secureResponse(admin ? Response.json({ authenticated: true, ...admin }) : Response.json({ error: "Administrator access is unavailable." }, { status: 403 }), true);
+        }
         if (url.pathname === "/api/targets") return secureResponse(Response.json(await portalTargets(env.DB, session)), true);
         const match = url.pathname.match(/^\/api\/targets\/([^/]+)\/([^/]+)\/report$/);
         if (match) {
