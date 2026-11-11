@@ -27,7 +27,7 @@ For production, use an owned custom domain with DNS control and complete Clerk's
 
 ## Signup and authorization
 
-Set Clerk **Invite-only** mode (`restricted` in its API), not open public signup. Disable unused enterprise/social enrollment paths and require verified email. These are deliberate account/security settings, not changes made by this code.
+Set Clerk **Invite-only** mode (`restricted` in its API), not open public signup. GitHub sign-in may be enabled in the selected Clerk instance; the application still requires its verified primary email, never a GitHub username or unverified profile email. Disable unused enrollment paths and require verified email. These are deliberate account/security settings, not changes made by this code.
 
 Do not use a Clerk domain allowlist to grant administrator status. Only `christian@unreelviews.com` and `marco@hexacombllc.com` are eligible in Content Hub, after verified identity and the admin gate. There is no public admin signup, promotion API, first-user administrator rule, or role inherited from accepting an invitation.
 

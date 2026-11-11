@@ -13,6 +13,9 @@ export default defineConfig({
       ASSETS: bindings.assets(),
       APP_ORIGIN: bindings.text("https://content-hub.marcode-chavez-jr.workers.dev"),
       INVITATIONS_ENABLED: bindings.text("false"),
+      // Reference the already configured server secret; never store its value here.
+      RESEND_API_KEY: bindings.secret(),
+      RESEND_FROM: bindings.text("content-hub@unreelviews.com"),
       ADMIN_ACCESS_ENABLED: bindings.text("false"),
       CLERK_AUTH_ENABLED: bindings.text("false"),
       REQUEST_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 120, period: 60 } }),

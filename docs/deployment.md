@@ -55,3 +55,5 @@ Automatic main-branch deployment is not established by this repository alone. It
 The separate `ADMIN_ACCESS_ENABLED` gate defaults to false. Only the two explicit operators in the server-side allowlist can qualify after verified email authentication. Do not add public signup, domain-wide matching, a client-controlled role claim, or promotion via invitations. Configure live access only through an approved operator flow.
 
 Clerk is the only supported browser authentication provider after this cutover; legacy Content Hub passwordless endpoints/cookies no longer authenticate users. Keep `CLERK_AUTH_ENABLED=false` until the selected application, keys, issuer, domain and invite-only settings are configured. See [Clerk setup](clerk.md).
+
+Cloudflare Builds should run `npm run build` from the repository root and deploy with `npx cf deploy --prebuilt --no-provision`. Do not use Wrangler against this cf/config project. Production tracks `main`; preview deployments should remain disabled. The source references the existing Resend secret and explicit sender so automated releases do not drop that configuration.
