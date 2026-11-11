@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Agent-updated client metrics and scheduled content on Cloudflare Workers and D1.",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.22.0 <25"
   },
   "scripts": {
     "dev": "npm run build:web && vite",

@@ -4,6 +4,8 @@
 
 This repository contains a buildable Worker backend and Astro static portal. The configuration targets an empty D1 database created for unreel content. It includes Clerk-verified browser sessions but no live mail configuration or production agent credential. Deployment and main-branch build setup are separately verified operations; do not infer live readiness from this document alone.
 
+Cloudflare Builds uses the exact tested Node version in `.node-version` (24.22.1). The cf CLI requires at least Node 24.22 on this release line; do not rely on an older build-image default. See [Cloudflare build-image version overrides](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/).
+
 The new Cloudflare CLI uses `cloudflare.config.ts`. It is beta, so versions are lockfile-pinned. `npm run build` only produces a local bundle. There is deliberately no automatic deploy or remote migration in the check script.
 
 ## First deployment checklist
