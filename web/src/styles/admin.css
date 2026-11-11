@@ -104,3 +104,24 @@
 @media (prefers-reduced-motion: no-preference) {
   .admin-button,.admin-nav-link,.admin-table tbody tr { transition: background-color 150ms ease-out; }
 }
+
+
+.admin-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.project-row { cursor: pointer; }
+a.admin-project-name { color: var(--admin-text); text-decoration: none; }
+a.admin-project-name:hover { text-decoration: underline; }
+.project-row:focus-within { background: #1c2c28; }
+.project-admin { display:flex; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px; }
+.project-admin p { flex-basis:100%; color:var(--admin-muted); margin:0; font-size:13px; }
+.project-admin a { color:var(--admin-accent); }
+.project-breadcrumb { color:var(--project-muted, #a0a9b2); font-size:13px; overflow-wrap:anywhere; }
+.invitation-panel { margin-bottom:28px; padding:24px; border:1px solid var(--admin-border); border-radius:12px; background:var(--admin-surface); overflow-wrap:anywhere; }
+.invitation-panel form { display:grid; gap:18px; max-width:650px; }
+.invitation-panel label { display:block; margin:10px 0; }
+.invitation-panel input:not([type=checkbox]) { display:block; width:100%; margin-top:8px; padding:12px; background:#101214; color:#edf1f3; border:1px solid #58626b; border-radius:6px; }
+.invitation-panel input[type=checkbox] { width:18px; height:18px; margin-right:10px; vertical-align:middle; }
+.invitation-panel fieldset { border:1px solid var(--admin-border); border-radius:8px; }
+.invitation-panel article { padding-block:16px; border-top:1px solid var(--admin-border); }
+.invitation-panel button { margin-right:12px; margin-block:8px; }
+.invitation-panel section p { white-space:pre-wrap; }
+.invitation-panel button:disabled { opacity:.45; cursor:not-allowed; }

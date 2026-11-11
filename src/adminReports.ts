@@ -7,7 +7,7 @@ import { compareReadings, monthRange, previousMonth, type Direction, type Qualit
 import { id } from './schemas.ts';
 
 type OverviewRow = { tenant_id:string; tenant_name:string; client_id:string; client_name:string; timezone:string; project_id:string|null; project_name:string|null; kind:string|null; platform_account_ref:string|null; status:string|null };
-const targetDTO = (p:OverviewRow) => ({tenantId:p.tenant_id,clientId:p.client_id,projectId:p.project_id!,name:p.project_name!,kind:p.kind!,platformAccountRef:p.platform_account_ref,status:p.status!});
+const targetDTO = (p:OverviewRow) => ({tenantId:p.tenant_id,clientId:p.client_id,clientName:p.client_name,projectId:p.project_id!,name:p.project_name!,kind:p.kind!,platformAccountRef:p.platform_account_ref,status:p.status!});
 const columns = `c.tenant_id,t.name AS tenant_name,c.id AS client_id,c.name AS client_name,c.timezone,p.id AS project_id,p.name AS project_name,p.kind,p.platform_account_ref,p.status`;
 const joins = `FROM clients c JOIN tenants t ON t.id=c.tenant_id LEFT JOIN projects p ON p.tenant_id=c.tenant_id AND p.client_id=c.id`;
 

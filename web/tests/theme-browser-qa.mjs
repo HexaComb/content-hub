@@ -17,7 +17,7 @@ const metric=(id,label,current,previous)=>({id,key:id,label,unit:'count',directi
 const report={target:{clientId:'synthetic',projectId:'demo',name:'Harbor Street Kitchen',kind:'instagram_account',platformAccountRef:'@synthetic.example',status:'active'},month:'2026-10',previousMonth:'2026-09',metrics:[metric('followers','Followers',35497,35183),metric('posts','Posts published',12,8),metric('likes','Average likes per post',314,269),{...metric('reach','Accounts reached',18420,16300),current:{value:18420,quality:'partial'},delta:null,relativePercent:null,change:'neutral',reason:'incomplete'}]};
 try{
  await page.route('**/api/auth/config',route=>route.fulfill({status:503,json:{error:'Authentication unavailable'}}));
- for(const route of ['/','/admin']){
+ for(const route of ['/','/project?client=synthetic&project=demo']){
   await page.goto(base+route);await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('unavailable'));
   await page.evaluate(async()=>{window.qa=await import('/qa.js');});
   for(const [key,preset] of Object.entries(themePresets))for(const width of [1440,1024,768,390,320]){
@@ -52,5 +52,5 @@ try{
   await page.evaluate(({report,theme})=>window.qa.renderReport({...report,appearance:{revision:3,theme:{...theme,css:'body{display:none}'}}}),{report,theme:hostile});
   assert.equal(await page.locator('[data-project-theme]').count(),0);
  }
- assert.deepEqual(errors,[]);console.log('PASS: 30 client/admin × palette × width variants, complete report content, partial warning, reset/switch isolation, hostile text, invalid-theme fallback, no page errors. Synthetic rendering only; live sign-in not tested.');
+ assert.deepEqual(errors,[]);console.log('PASS: 30 client/project × palette × width variants, complete report content, partial warning, reset/switch isolation, hostile text, invalid-theme fallback, no page errors. Synthetic rendering only; live sign-in not tested.');
 }finally{await browser.close();server.close();}

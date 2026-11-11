@@ -1,5 +1,5 @@
 import {getClerk,AuthUnavailable} from './auth';
-export class ApiError extends Error { constructor(public status:number) { super(status === 401 ? 'Your session has ended. Sign in again to continue.' : status === 403 || status === 404 ? 'This workspace is no longer available to you. Ask your administrator to check your access.' : status === 503 ? 'Sign-in is currently unavailable. Ask your workspace administrator to finish setting up secure access.' : status === 429 ? 'Too many attempts. Please wait a little before trying again.' : 'We couldn’t complete that request. Please try again.'); } }
+export class ApiError extends Error { constructor(public status:number) { super(status === 401 ? 'Your session has ended. Sign in again to continue.' : status === 403 || status === 404 ? 'This project is no longer available to you. Ask your administrator to check your access.' : status === 503 ? 'Sign-in is currently unavailable. Ask your administrator to finish setting up secure access.' : status === 429 ? 'Too many attempts. Please wait a little before trying again.' : 'We couldn’t complete that request. Please try again.'); } }
 export async function api<T>(path:string, options:RequestInit={}):Promise<T> {
  if(!path.startsWith('/api/')||path.startsWith('//'))throw new Error('API requests must stay on this origin.');
  const clerk=await getClerk();

@@ -4,7 +4,7 @@ import type { InvitationEnv } from './mail.ts';
 
 // Only server-verified primary emails qualify. Normalize case/outer whitespace;
 // never strip aliases, dots, or rewrite domains. No signup/promotion APIs exist.
-const SUPER_ADMINS = ['christian@unreelviews.com', 'marco@hexacombllc.com'] as const;
+export const SUPER_ADMINS = ['christian@unreelviews.com', 'marco@hexacombllc.com'] as const;
 export function isSuperAdminEmail(email: string): boolean {
  return SUPER_ADMINS.some(allowed => allowed === email.trim().toLowerCase());
 }

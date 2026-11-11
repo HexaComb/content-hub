@@ -6,3 +6,7 @@ export function adminEmptyMessage(counts:AdminOverview['counts']):string {
 export function adminReportPath(target:AdminTarget,month:string):string {
  return `/api/admin/targets/${[target.tenantId,target.clientId,target.projectId].map(encodeURIComponent).join('/')}/report?month=${encodeURIComponent(month)}`;
 }
+
+export function projectPagePath(target:{tenantId?:string;clientId:string;projectId:string}):string {
+ const params=new URLSearchParams();if(target.tenantId)params.set('tenant',target.tenantId);params.set('client',target.clientId);params.set('project',target.projectId);return `/project?${params}`;
+}

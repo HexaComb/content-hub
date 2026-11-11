@@ -8,19 +8,18 @@ import Workspace from '../components/Workspace.astro';
       <div id="status" class="admin-notice" role="status" aria-live="polite">Checking administrator access…</div>
       <section id="welcome" class="admin-welcome" hidden><h2>Administrator sign-in</h2><p>Use your existing authorized account. Signing in does not grant administrator access.</p><div id="clerk-sign-in" class="clerk-container"></div></section>
       <div id="admin-workspace" hidden>
-        <section class="admin-overview" aria-label="Workspace overview">
-          <dl class="admin-stats"><div><dt><AdminIcon name="folder" />Projects</dt><dd id="project-total">—</dd><dd class="admin-stat-note">Across all clients</dd></div><div><dt><AdminIcon name="users" />Clients</dt><dd id="client-total">—</dd><dd class="admin-stat-note">In your organization</dd></div><div><dt><AdminIcon name="workspace" />Workspaces</dt><dd id="workspace-total">—</dd><dd class="admin-stat-note">Connected in one place</dd></div></dl>
+        <section class="admin-overview" aria-label="Client and project overview">
+          <dl class="admin-stats"><div><dt><AdminIcon name="folder" />Projects</dt><dd id="project-total">—</dd><dd class="admin-stat-note">Across all clients</dd></div><div><dt><AdminIcon name="users" />Clients</dt><dd id="client-total">—</dd><dd class="admin-stat-note">In your organization</dd></div></dl>
         </section>
         <section class="admin-directory" aria-labelledby="directory-title">
           <div class="admin-directory-heading"><div><h2 id="directory-title">Project directory</h2><p id="summary"></p></div><button id="refresh" class="admin-button"><AdminIcon name="refresh" />Refresh</button></div>
           <div id="empty" class="admin-notice" hidden></div>
-          <div class="admin-table-scroll" tabindex="0" role="region" aria-label="All clients and projects, horizontally scrollable"><table class="admin-table"><thead><tr><th scope="col">Project / account</th><th scope="col">Client</th><th scope="col">Workspace</th><th scope="col">Status</th><th scope="col"><span class="admin-sr-only">Report</span></th></tr></thead><tbody id="project-rows"></tbody></table></div>
+          <div class="admin-table-scroll" tabindex="0" role="region" aria-label="All clients and projects, horizontally scrollable"><table class="admin-table"><thead><tr><th scope="col">Project / account</th><th scope="col">Client</th><th scope="col">Status</th><th scope="col"><span class="admin-sr-only">Report</span></th></tr></thead><tbody id="project-rows"></tbody></table></div>
           <div class="admin-directory-footer"><span>Includes active, paused, completed and archived projects.</span><button id="load-more" class="admin-button admin-button-quiet" hidden>Load more projects</button></div>
         </section>
-        <div class="admin-report-area">
-<section id="report" tabindex="-1" hidden><section class="toolbar"><span class="quiet-pill">Administrator report view</span><div class="month-control"><label for="month">REPORTING MONTH</label><input type="month" id="month" min="1000-01" max="9999-12"/></div></section><section class="target-heading"><img id="theme-logo" hidden alt=""/><div><p id="theme-eyebrow" hidden></p><h2 id="target-name"></h2><p id="target-detail"></p><p id="theme-tagline" hidden></p></div></section><div class="theme-divider" aria-hidden="true"></div><p id="report-status" role="status" aria-live="polite"></p><div class="section-heading"><h2>At a glance</h2><p id="comparison-label"></p></div><section id="metrics" class="metrics"></section><section class="panel comparison-panel"><h2>Two months, side by side</h2><div id="comparison-chart" class="comparison-chart"></div></section><section class="panel data-panel"><div class="table-scroll" tabindex="0" role="region" aria-label="Monthly metric readings"><table><thead><tr><th scope="col">Metric</th><th scope="col">Selected month</th><th scope="col">Previous month</th><th scope="col">Change</th><th scope="col">Quality / collection date</th></tr></thead><tbody id="metric-rows"></tbody></table></div></section></section>
-        </div>
+
       </div>
 </Workspace>
 <script>import '../scripts/admin';</script>
 </Shell>
+

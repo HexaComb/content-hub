@@ -1,3 +1,4 @@
+import { adminAccessEnabled, requireSuperAdmin, SUPER_ADMINS } from './admin.ts';
 import { getHumanIdentity, clerkAuthConfigured, type HumanIdentity } from './humanAuth.ts';
 import { authorize, PublicError, type Principal } from './auth.ts';
 import { canonicalJson, sha256 } from './domain.ts';
@@ -12,12 +13,22 @@ type Invite = {id:string;tenant_id:string;client_id:string;project_id:string;rec
 const eligible = `i.revoked_at IS NULL AND i.accepted_at IS NULL AND i.invite_expires_at > ? AND i.grant_expires_at > ?
  AND EXISTS(SELECT 1 FROM projects p WHERE p.tenant_id=i.tenant_id AND p.client_id=i.client_id AND p.id=i.project_id AND p.status!='archived' AND p.revision=i.target_revision)
  AND NOT EXISTS(SELECT 1 FROM json_each(i.metric_ids_json) m WHERE NOT EXISTS(SELECT 1 FROM project_metrics pm WHERE pm.tenant_id=i.tenant_id AND pm.client_id=i.client_id AND pm.project_id=i.project_id AND pm.metric_id=m.value))`;
-const authority = `EXISTS(SELECT 1 FROM principals a JOIN client_grants cg ON cg.tenant_id=a.tenant_id AND cg.principal_id=a.id WHERE a.tenant_id=i.tenant_id AND a.id=i.approved_by AND a.revoked_at IS NULL AND a.expires_at > ? AND cg.client_id=i.client_id AND EXISTS(SELECT 1 FROM json_each(a.scopes_json) WHERE value='invitations:send'))`;
-export function invitations(db:D1Database, principal:Principal, env:InvitationEnv, fake?:MailTransport) {
+const serviceAuthority = `EXISTS(SELECT 1 FROM principals a JOIN client_grants cg ON cg.tenant_id=a.tenant_id AND cg.principal_id=a.id WHERE a.tenant_id=i.tenant_id AND a.id=i.approved_by AND a.revoked_at IS NULL AND a.expires_at > ? AND cg.client_id=i.client_id AND EXISTS(SELECT 1 FROM json_each(a.scopes_json) WHERE value='invitations:send'))`;
+// A browser admin is an inert audit actor, not an authenticated service or OAuth
+// principal. Only server-verified identity can enter this branch. Every action
+// checks the current admin allowlist/gate and its immutable issuer/subject binding.
+export function invitations(db:D1Database, principal:Principal, env:InvitationEnv, fake?:MailTransport, adminIdentity?:HumanIdentity) {
+ const authorizeActor = async (clientId:string,scope:string) => {
+  if (!adminIdentity) return authorize(db,principal,clientId,scope);
+  requireSuperAdmin(adminIdentity,env);
+  const actor=await db.prepare(`SELECT 1 FROM admin_invitation_actors a JOIN principals p ON p.tenant_id=a.tenant_id AND p.id=a.principal_id WHERE a.tenant_id=? AND a.principal_id=? AND a.identity_issuer=? AND a.identity_subject=? AND a.verified_email=? AND p.revoked_at IS NULL AND p.expires_at>? AND substr(p.token_hash,1,6)='admin:' AND p.scopes_json='[]'`).bind(principal.tenantId,principal.id,adminIdentity.issuer,adminIdentity.subject,adminIdentity.email,new Date().toISOString()).first();
+  if(!actor)throw new PublicError('Administrator invitation authority is unavailable.');
+ };
+
  return {
  async prepareInvitation(raw:PrepareInvitationInput) {
   const input=prepareInvitationInput.parse(raw);
-  await authorize(db,principal,input.clientId,'invitations:manage');
+  await authorizeActor(input.clientId,'invitations:manage');
   if (!(Date.parse(input.grantExpiresAt)>Date.now()) || Date.parse(input.grantExpiresAt)>Date.now()+366*86400000) throw new PublicError('Access expiry must be within one year.');
   const target=await db.prepare('SELECT name,kind,platform_account_ref,revision,status FROM projects WHERE tenant_id=? AND client_id=? AND id=?').bind(principal.tenantId,input.clientId,input.projectId).first<{name:string;kind:string;platform_account_ref:string|null;revision:number;status:string}>();
   if (!target || target.status==='archived') throw new PublicError('Target unavailable.');
@@ -34,7 +45,7 @@ export function invitations(db:D1Database, principal:Principal, env:InvitationEn
   sendInvitationInput.parse(input);
   const row=await db.prepare('SELECT * FROM invitations WHERE id=? AND tenant_id=?').bind(input.invitationId,principal.tenantId).first<Invite>();
   if(!row) throw new PublicError('Invitation unavailable.');
-  await authorize(db,principal,row.client_id,'invitations:send');
+  await authorizeActor(row.client_id,'invitations:send');
   const transport=invitationMail(env,fake), origin=appOrigin(env);
   if(row.approval_digest!==input.approvalDigest) throw new PublicError('Approval does not match the prepared invitation.');
   const token=randomToken(), time=now();
@@ -49,11 +60,11 @@ export function invitations(db:D1Database, principal:Principal, env:InvitationEn
   } catch { await db.prepare("UPDATE invitations SET delivery_state='uncertain' WHERE id=?").bind(row.id).run(); return {invitationId:row.id,deliveryState:'uncertain',notice:'Do not resend. Revoke and explicitly approve a replacement.'}; }
  },
  async listInvitations(input:{clientId:string}) {
-  await authorize(db,principal,input.clientId,'invitations:manage');
+  await authorizeActor(input.clientId,'invitations:manage');
   return {invitations:(await db.prepare('SELECT id,project_id,recipient_email,metric_ids_json,invite_expires_at,grant_expires_at,delivery_state,accepted_at,revoked_at FROM invitations WHERE tenant_id=? AND client_id=? ORDER BY created_at DESC LIMIT 200').bind(principal.tenantId,input.clientId).all()).results};
  },
  async revokeInvitation(input:{clientId:string;invitationId:string}) {
-  await authorize(db,principal,input.clientId,'invitations:manage');
+  await authorizeActor(input.clientId,'invitations:manage');
   const result=await db.prepare('UPDATE invitations SET revoked_at=COALESCE(revoked_at,?) WHERE id=? AND tenant_id=? AND client_id=?').bind(now(),input.invitationId,principal.tenantId,input.clientId).run();
   if(result.meta.changes)await db.prepare('INSERT INTO invitation_audit VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),input.invitationId,principal.id,'revoked',now()).run();
   return {revoked:Boolean(result.meta.changes)};
@@ -81,8 +92,12 @@ export async function handleInvitationRequest(request:Request,env:InvitationEnv,
  const rate=await db.prepare('INSERT INTO invitation_rate_limits VALUES(?,1) ON CONFLICT(bucket) DO UPDATE SET hits=hits+1 RETURNING hits').bind(bucket).first<{hits:number}>();
  if(!rate||rate.hits>30)return json({error:'Please try again later.'},429);
  const tokenHash=await sha256(input.token),time=now();
+ // Pending browser invitations remain valid only while their issuing admin is
+ // eligible and enabled. Existing service invitations retain their original rules.
+ const authority = `(${serviceAuthority} OR EXISTS(SELECT 1 FROM admin_invitation_actors a JOIN principals p ON p.tenant_id=a.tenant_id AND p.id=a.principal_id WHERE ?=1 AND a.tenant_id=i.tenant_id AND a.principal_id=i.approved_by AND a.identity_issuer=? AND a.verified_email IN (?,?) AND p.revoked_at IS NULL AND p.expires_at>? AND substr(p.token_hash,1,6)='admin:' AND p.scopes_json='[]'))`;
+ const authorityBindings = [time,adminAccessEnabled(env)?1:0,env.CLERK_ISSUER??'',...SUPER_ADMINS,time];
  if(path==='/api/invitations/begin'){
-  const row=await db.prepare(`SELECT i.* FROM invitations i WHERE token_hash=? AND recipient_email=? AND i.delivery_state IN ('accepted','uncertain') AND ${eligible} AND ${authority}`).bind(tokenHash,actor.email,time,time,time).first<Invite>();
+  const row=await db.prepare(`SELECT i.* FROM invitations i WHERE token_hash=? AND recipient_email=? AND i.delivery_state IN ('accepted','uncertain') AND ${eligible} AND ${authority}`).bind(tokenHash,actor.email,time,time,...authorityBindings).first<Invite>();
   if(!row)return json({error:'Invitation unavailable.'},400);
   const preview=JSON.parse(row.preview_json) as {target:{name:string;kind:string;platformAccountRef:string|null}};
   return json({invitation:{target:{name:preview.target.name,kind:preview.target.kind,platformAccountRef:preview.target.platformAccountRef},metricIds:JSON.parse(row.metric_ids_json),role:'metrics_viewer',grantExpiresAt:row.grant_expires_at}});
@@ -91,10 +106,10 @@ export async function handleInvitationRequest(request:Request,env:InvitationEnv,
  // D1 executes this batch atomically. Only the conditional single-use winner
  // receives this operation ID and its issuer/subject-bound read-only grant.
  await db.batch([
-  db.prepare(`UPDATE invitations AS i SET accepted_at=?,acceptance_id=?,accepted_identity_issuer=?,accepted_identity_subject=? WHERE token_hash=? AND recipient_email=? AND i.delivery_state IN ('accepted','uncertain') AND ${eligible} AND ${authority}`).bind(time,operation,actor.issuer,actor.subject,tokenHash,actor.email,time,time,time),
+  db.prepare(`UPDATE invitations AS i SET accepted_at=?,acceptance_id=?,accepted_identity_issuer=?,accepted_identity_subject=? WHERE token_hash=? AND recipient_email=? AND i.delivery_state IN ('accepted','uncertain') AND ${eligible} AND ${authority}`).bind(time,operation,actor.issuer,actor.subject,tokenHash,actor.email,time,time,...authorityBindings),
   db.prepare("INSERT INTO invitation_audit SELECT ?,id,?,'accepted',? FROM invitations WHERE acceptance_id=?").bind(crypto.randomUUID(),canonicalJson({issuer:actor.issuer,subject:actor.subject}),time,operation),
  ]);
- const accepted=await db.prepare('SELECT 1 FROM invitations WHERE acceptance_id=?').bind(operation).first();
+ const accepted=await db.prepare('SELECT client_id,project_id FROM invitations WHERE acceptance_id=?').bind(operation).first<{client_id:string;project_id:string}>();
  if(!accepted)return json({error:'Invitation unavailable.'},400);
- return json({accepted:true,role:'metrics_viewer'});
+ return json({accepted:true,role:'metrics_viewer',projectPath:`/project?client=${encodeURIComponent(accepted.client_id)}&project=${encodeURIComponent(accepted.project_id)}`});
 }

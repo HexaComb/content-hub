@@ -1,3 +1,4 @@
+import { handleAdminInvitationRequest, isAdminInvitationPath } from './adminInvitations.ts';
 import { getProjectTheme, validateProjectTheme, updateProjectTheme, resetProjectTheme } from './themes.ts';
 import { themeTargetInput, validateThemeInput, updateThemeInput, resetThemeInput } from './themeSchema.ts';
 import { oauthToolRegistrar } from "./oauthTools.ts";
@@ -113,6 +114,11 @@ export default {
           return secureResponse(Response.json({ error: "Not found." }, { status: 404 }), true);
         if (["/api/invitations/begin", "/api/invitations/accept"].includes(url.pathname))
           return secureResponse(await handleInvitationRequest(request, env), true);
+        if (isAdminInvitationPath(url.pathname)) {
+          const identity = await getHumanIdentity(request,env);
+          if(!identity)return secureResponse(Response.json({error:'Sign in to continue.'},{status:401}),true);
+          return secureResponse(await handleAdminInvitationRequest(request,env,identity),true);
+        }
         if (request.method !== "GET") return secureResponse(Response.json({ error: "Method not allowed." }, { status: 405 }), true);
         if (url.pathname === "/api/auth/config") {
           const auth = clerkConfiguration(env);

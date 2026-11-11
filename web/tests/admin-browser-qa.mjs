@@ -59,42 +59,10 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('#project-rows tr').length===4);
  assert.equal(await page.locator('#load-more').isVisible(),false);
  await page.screenshot({path:output+'/desktop.png',fullPage:true});
- await page.getByRole('button',{name:'View report for Studio North / Instagram',exact:true}).click();
- await page.waitForFunction(()=>document.querySelectorAll('.metric-card').length===1);
- assert.equal(await page.locator('#target-name').innerText(),names[0]);
- assert.equal(await page.locator('.admin-report-button[aria-pressed="true"]').count(),1);
- assert.equal(await page.locator('.metric-card').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(23, 26, 29)');
- await page.locator('#month').fill('2026-09');await page.locator('#month').dispatchEvent('change');
- await page.waitForFunction(()=>document.getElementById('comparison-label').textContent.includes('September'));
- assert.equal(reportMonth,'2026-09');
- await page.evaluate(()=>{document.activeElement?.blur();scrollTo(0,0);});
- await page.screenshot({path:output+'/project-report.png',fullPage:true});
- for(const width of [390,320]){
-  await page.setViewportSize({width,height:844});
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`No report page overflow at ${width}`);
-  if(width===390){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:output+'/project-report-mobile.png',fullPage:true});}
- }
- await page.setViewportSize({width:1440,height:1000});
- for(const [key,theme] of Object.entries(themePresets)){
-  appearance={revision:1,theme,updatedAt:null};
-  await page.getByRole('button',{name:'View report for Studio North / Instagram',exact:true}).click();
-  await page.waitForFunction(name=>document.querySelector('#report').style.getPropertyValue('--project-accent')===name,theme.colors.accent);
-  const expectedRgb=hex=>`rgb(${[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)).join(', ')})`;
-  assert.equal(await page.locator('#report').evaluate(el=>getComputedStyle(el).backgroundColor),expectedRgb(theme.colors.background));
-  assert.equal(await page.locator('#report').evaluate(el=>getComputedStyle(el).color),expectedRgb(theme.colors.text));
-  assert.equal(await page.locator('#report').evaluate(el=>getComputedStyle(el).borderRadius),{square:'0px',soft:'10px',rounded:'22px'}[theme.layout.corners]);
-  assert.equal(await page.locator('.admin-app').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(16, 18, 20)');
-  for(const width of [1440,390,320]){
-   await page.setViewportSize({width,height:1000});
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${key} report overflow at ${width}`);
-   if(key==='night'&&width!==320){await page.evaluate(()=>{document.activeElement?.blur();scrollTo(0,0);});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.screenshot({path:output+`/custom-theme-${width}.png`,fullPage:true});}
-  }
- }
- appearance=undefined;
- await page.setViewportSize({width:1440,height:1000});
+ assert.equal(await page.getByRole('link',{name:'Preview page for Studio North / Instagram',exact:true}).getAttribute('href'),'/project?tenant=demo&client=client-0&project=project-0');
+ assert.equal(await page.locator('#workspace-total').count(),0);
  await page.getByRole('button',{name:'Refresh',exact:true}).click();
  await page.waitForFunction(()=>!document.getElementById('admin-workspace').hidden);
- assert.equal(await page.locator('#report').isVisible(),false);
  for(const width of [390,768,320]){
   await page.setViewportSize({width,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`No page overflow at ${width}`);
@@ -110,5 +78,6 @@ try{
  assert.equal(await page.locator('#project-rows tr').count(),0);
  await page.screenshot({path:output+'/denied.png',fullPage:true});
  assert.deepEqual(errors,[]);
- console.log('PASS: desktop/mobile/tablet layouts, totals, pagination, report selection, month change, preserved report palette, refresh, empty and denied states. Synthetic authentication only.');
+ console.log('PASS: desktop/mobile/tablet layouts, totals, pagination, standalone project links, refresh, empty and denied states. Synthetic authentication only.');
 }finally{await browser.close();server.close();}
+

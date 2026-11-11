@@ -6,8 +6,8 @@ An agency workspace for storing client metrics, comparing reporting periods, and
 
 - Cloudflare Worker with a stateless remote MCP endpoint at `/mcp`.
 - Cloudflare D1 schema with tenant and client boundaries.
-- Static Astro client portal, target/month selection, private metric comparisons.
-- Target-scoped invitations, Clerk-verified recipient identity and Resend transport (disabled until configured).
+- Static Astro client portal, deep-linked themed client project pages, month selection and private metric comparisons.
+- Target-scoped browser admin invitation review, Clerk-verified recipient identity and Resend transport (disabled until configured).
 - Fail-closed super-admin eligibility for the two explicitly named operators only, requiring verified sessions and separate enablement. No public admin signup or promotion.
 - Per-project/account MCP design documents with isolated styling, accessible palettes and audited reset. Report data and permissions remain unchanged.
 - Arbitrary metric definitions and numeric observations. Instagram and SEO are categories, not hardcoded tables.
@@ -67,6 +67,8 @@ The database starts empty. `/` is the private portal sign-in, `/invite` accepts 
 An agent can obtain numbers from OpenSEO or another source, then call `record_observation`. **unreel content does not connect to OpenSEO.** Likewise, any authorized agent can retrieve scheduled content. A consumer such as Muse would be external; no specific bot is required or integrated.
 
 ## Design documents
+
+- [Client project pages and browser invitation administration](docs/client-project-pages.md)
 
 - [Project/account presentation through MCP](docs/themes.md)
 - [Architecture and product plan](docs/architecture.md)

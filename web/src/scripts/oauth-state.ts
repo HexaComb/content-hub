@@ -14,9 +14,11 @@ export function safeSignInReturn(returnPath:string,origin:string):string {
  const url=new URL(returnPath,origin);
  // Directory-form navigation is supported, but sign-in return and JSON API
  // requests always use the advertised endpoint without changing opaque query.
+ if(url.pathname==='/project/')url.pathname='/project';
  if(url.pathname==='/authorize/')url.pathname='/authorize';
- if(url.origin!==origin||url.hash||!['/','/invite','/authorize','/admin'].includes(url.pathname)||returnPath.startsWith('//'))throw new Error('Invalid sign-in return');
- if(url.pathname!=='/authorize'&&url.search)throw new Error('Unexpected sign-in parameters');
+ if(url.origin!==origin||url.hash||!['/','/invite','/authorize','/admin','/project'].includes(url.pathname)||returnPath.startsWith('//'))throw new Error('Invalid sign-in return');
+ if(url.pathname==='/project'&&([...url.searchParams.keys()].some(key=>!['tenant','client','project'].includes(key))||!url.searchParams.get('client')||!url.searchParams.get('project')||['tenant','client','project'].some(key=>url.searchParams.getAll(key).length>1)))throw new Error('Unexpected project parameters');
+ if(url.pathname!=='/authorize'&&url.pathname!=='/project'&&url.search)throw new Error('Unexpected sign-in parameters');
  return url.href;
 }
 const allowedScopes=new Set(['mcp:connect','clients:read','offline_access','themes:read','themes:write','projects:read','projects:write','metrics:read','metrics:write','content:read','content:write','clients:write']);

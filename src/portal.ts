@@ -3,16 +3,16 @@ import { PublicError } from "./auth.ts";
 import { compareReadings, monthRange, previousMonth, type Direction, type Quality } from "./domain.ts";
 
 import type { HumanIdentity } from "./humanAuth.ts";
-type TargetRow = { tenant_id: string; client_id: string; project_id: string; name: string; kind: string; platform_account_ref: string | null; status: string };
-const targetDTO = (p: TargetRow) => ({ clientId: p.client_id, projectId: p.project_id, name: p.name, kind: p.kind, platformAccountRef: p.platform_account_ref, status: p.status });
+type TargetRow = { tenant_id: string; client_id: string; client_name:string; project_id: string; name: string; kind: string; platform_account_ref: string | null; status: string };
+const targetDTO = (p: TargetRow) => ({ clientId: p.client_id, clientName:p.client_name, projectId: p.project_id, name: p.name, kind: p.kind, platformAccountRef: p.platform_account_ref, status: p.status });
 
 // The caller must resolve and verify the identity on every request. Resource
 // permissions remain server-side and bind the stable issuer/subject pair, never
 // a mutable email address. Legacy grants with NULL identity fields fail closed.
 const activeGrant = `i.accepted_at IS NOT NULL AND i.revoked_at IS NULL AND i.grant_expires_at>?
   AND p.status!='archived' AND i.accepted_identity_issuer=? AND i.accepted_identity_subject=?`;
-const targetJoin = `FROM invitations i JOIN projects p ON p.tenant_id=i.tenant_id AND p.client_id=i.client_id AND p.id=i.project_id`;
-const targetColumns = `p.tenant_id,p.client_id,p.id AS project_id,p.name,p.kind,p.platform_account_ref,p.status`;
+const targetJoin = `FROM invitations i JOIN projects p ON p.tenant_id=i.tenant_id AND p.client_id=i.client_id AND p.id=i.project_id JOIN clients c ON c.tenant_id=p.tenant_id AND c.id=p.client_id`;
+const targetColumns = `p.tenant_id,p.client_id,c.name AS client_name,p.id AS project_id,p.name,p.kind,p.platform_account_ref,p.status`;
 const accessBindings = (identity: HumanIdentity) => {
   const now = new Date().toISOString();
   return [now, identity.issuer, identity.subject];

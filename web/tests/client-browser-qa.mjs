@@ -26,7 +26,7 @@ const server=createServer(async(req,res)=>{try{
  if(!file.startsWith(root+'/'))throw Error();
  res.setHeader('Content-Type',({'.html':'text/html','.js':'application/javascript','.css':'text/css','.jpg':'image/jpeg'})[extname(file)]||'application/octet-stream');
  let body=await readFile(file);
- if(path==='/'||path==='/admin/')body=body.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'').replace('</body>',`<script type="module" src="/qa-${path==='/'?'client':'admin'}.js"></script></body>`);
+ if(path==='/'||path==='/admin/'||path==='/project'||path==='/project/')body=body.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'').replace('</body>',`<script type="module" src="/qa-${path==='/admin/'?'admin':'client'}.js"></script></body>`);
  res.end(body);
 }catch{res.writeHead(404);res.end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const base=`http://127.0.0.1:${server.address().port}`;
@@ -87,13 +87,13 @@ try{
  await page.setViewportSize({width:390,height:900});await page.getByRole('button',{name:'Open navigation'}).click();await page.touchscreen.tap(380,400);assert.equal(await page.locator('#workspace-navigation').isVisible(),false);
  await page.getByRole('button',{name:'Open navigation'}).click();await page.setViewportSize({width:1440,height:1100});assert.equal(await page.locator('#workspace-navigation').evaluate(el=>el.open&&!el.matches(':modal')),true);assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('navigation-open')),false);
  for(const [index,[key,theme]] of Object.entries(Object.entries(themePresets))){
-  await page.locator('#target').selectOption(String(Number(index)+1));await page.waitForFunction(accent=>document.getElementById('dashboard').style.getPropertyValue('--project-accent')===accent,theme.colors.accent);
+  await page.goto(base+'/project?client=synthetic&project='+key);await page.waitForFunction(accent=>document.getElementById('dashboard').style.getPropertyValue('--project-accent')===accent,theme.colors.accent);
   const rgb=hex=>`rgb(${[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)).join(', ')})`;
   assert.equal(await page.locator('#dashboard').evaluate(el=>getComputedStyle(el).backgroundColor),rgb(theme.colors.background));
   assert.equal(await page.locator('.workspace-app').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(16, 18, 20)');
   for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});await noOverflow(`${key} ${width}`);if(key==='editorial'&&width!==320)await capture(`client-custom-${width}`);}
  }
- await page.locator('#target').selectOption('0');await page.waitForFunction(()=>!document.getElementById('dashboard').hasAttribute('data-project-theme')&&document.querySelectorAll('.metric-card').length===4);
+ await page.goto(base+'/');await page.waitForFunction(()=>!document.getElementById('dashboard').hasAttribute('data-project-theme')&&document.querySelectorAll('.metric-card').length===4);
  assert.equal(await page.locator('.metric-card').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(23, 26, 29)');
  mode='error';await page.getByRole('button',{name:'Previous month'}).click();await page.waitForFunction(()=>document.getElementById('status').textContent.includes('Try again'));mode='populated';await page.getByRole('button',{name:'Try again'}).click();await page.waitForFunction(()=>document.querySelectorAll('.metric-card').length===4);
  mode='no-metrics';await page.reload();await page.waitForFunction(()=>document.querySelector('#metrics .notice'));await capture('client-no-metrics');
@@ -105,3 +105,4 @@ try{
  assert.deepEqual(errors,[]);
  console.log('PASS: client dark reports, genuine logo, desktop collapse/persistence, mobile modal focus/Tab/Escape/backdrop/resize, admin shared navigation, month controls, all project themes, reset, retry, no-metrics, no-access, sign-in and denied states. Synthetic auth only.');
 }finally{await browser.close();server.close();}
+
