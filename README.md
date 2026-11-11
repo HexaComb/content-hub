@@ -73,6 +73,9 @@ A new installation starts with an empty database. `/` is the private portal sign
 | `send_invitation` | Send only an explicitly approved invitation | `invitations:send` |
 | `create_client` / `update_client` | Create or revise a client with an audit receipt | `clients:write` |
 | `create_project` / `update_project` | Create or revise an Instagram-account/one-off-project target | `projects:write` |
+| `get_project_presentation` / `validate_project_presentation` | Read and validate private standalone client-page designs | `presentations:read` |
+| `save_project_presentation_draft` / `restore_project_presentation` | Save or restore a private design draft | `presentations:write` |
+| `publish_project_presentation` | Publish the exact current draft to existing authorized recipients | `presentations:publish` |
 | `get_project_theme` / `validate_project_theme` | Read a target design or validate a proposed design without saving | `themes:read` |
 | `update_project_theme` / `reset_project_theme` | Apply or reset a target design independently of report data | `themes:write` |
 | `list_projects` | Read project targets and metric associations | `projects:read` |
@@ -98,6 +101,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 
 - [Client project pages and browser invitation administration](docs/client-project-pages.md)
 
+- [Private standalone client microsites](docs/presentations.md)
 - [Project/account presentation through MCP](docs/themes.md)
 - [Architecture and product plan](docs/architecture.md)
 - [Metric semantics and reporting](docs/metrics.md)

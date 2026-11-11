@@ -1,3 +1,4 @@
+import {clientPresentationPagePath} from './client-presentation-state';
 import {mountProjectPlugins} from './project-plugins';
 import {readPluginKey,pluginCatalog,dashboardViewState} from './plugin-state';
 import {readProjectRoute,projectReportPath,previousCompletedMonth} from './project-state';
@@ -16,7 +17,7 @@ let targets:Target[]=[];let controller:AbortController|undefined;let generation=
 const month=$<HTMLInputElement>('month');const selector=$<HTMLSelectElement>('target');
 month.value=isProject?previousCompletedMonth():new Date().toISOString().slice(0,7);
 function status(text:string,retry?:()=>void){const box=$('status');box.replaceChildren(document.createTextNode(text));box.hidden=!text;if(retry){const button=document.createElement('button');button.textContent='Try again';button.className='text-button';button.onclick=retry;box.append(' ',button);}}
-function clearReport(){$('dashboard').hidden=true;projectPlugins?.clearContent();clearProjectTheme($('dashboard'));document.title=isProject?'Client project':'Performance overview';$('project-breadcrumb').hidden=true;for(const id of ['project-breadcrumb','target-name','target-detail','target-status','target-avatar'])$(id).textContent='';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
+function clearReport(){$('client-page-entry').hidden=true;$('open-client-page').removeAttribute('href');$('dashboard').hidden=true;projectPlugins?.clearContent();clearProjectTheme($('dashboard'));document.title=isProject?'Client project':'Performance overview';$('project-breadcrumb').hidden=true;for(const id of ['project-breadcrumb','target-name','target-detail','target-status','target-avatar'])$(id).textContent='';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
 async function loadReport(){controller?.abort();controller=new AbortController();const request=++generation;const target=targets[Number(selector.value)];clearReport();if(!target)return;status('Loading this month’s report…');$('dashboard').setAttribute('aria-busy','true');$('target-name').textContent=target.name;$('target-detail').textContent=`Project${target.platformAccountRef?` · ${target.platformAccountRef}`:''}`;$('target-avatar').textContent=target.kind==='instagram_account'?'◎':'↗';$('target-status').textContent=target.status;
  try{
   const allReport=await api<Report>(projectReportPath(target,month.value,verifiedAdmin),{signal:controller.signal});if(request!==generation)return;
@@ -36,6 +37,7 @@ async function loadReport(){controller?.abort();controller=new AbortController()
   const heading=document.querySelector('.admin-heading h1');if(heading&&isProject)heading.textContent=selectedPlugin?`${pluginCatalog[selectedPlugin].name} dashboard`:report.target.name;
   $('project-preview-label').textContent=selectedPlugin?`Administrator preview · ${pluginCatalog[selectedPlugin].name}`:'Administrator preview · Project home';
   $('project-preview-description').textContent=selectedPlugin?`This dashboard shows only compatible ${pluginCatalog[selectedPlugin].name} metrics. Client recipients see only their approved metrics.`:'Choose a dashboard below. Client recipients see only their approved metrics.';
+  if(isProject){$<HTMLAnchorElement>('open-client-page').href=clientPresentationPagePath({clientId:target.clientId,projectId:target.projectId,...(verifiedAdmin&&target.tenantId?{tenantId:target.tenantId}:{}),month:month.value});$('client-page-entry').hidden=false;}
   $('dashboard').hidden=!view.report;status('');void projectPlugins?.loadContent();
  }
  catch(e){if(request!==generation||(e instanceof DOMException&&e.name==='AbortError'))return;status(message(e),()=>void loadReport());if(e instanceof ApiError&&[401,403,404].includes(e.status)){$('dashboard').hidden=true;if(e.status===401){$('welcome').hidden=true;status(verificationMessage,()=>void boot());}}}

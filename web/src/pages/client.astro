@@ -1,0 +1,39 @@
+---
+import '../styles/client-presentation.css';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Private client report</title>
+  </head>
+  <body>
+    <a class="cp-skip" href="#client-main">Skip to report</a>
+    <header class="cp-access-bar" aria-label="Private report access">
+      <a class="cp-wordmark" href="/">unreel <span>content</span></a>
+      <div class="cp-access-actions"><span id="client-identity">Private client report</span><button id="client-logout" type="button" hidden>Sign out</button></div>
+    </header>
+    <main id="client-main" tabindex="-1">
+      <div id="client-status" class="cp-status" role="status" aria-live="polite">Opening your private report…</div>
+      <section id="client-welcome" class="cp-welcome" aria-labelledby="client-welcome-heading" hidden>
+        <p class="cp-kicker">INVITATION ONLY</p><h1 id="client-welcome-heading">A closer look at your progress.</h1>
+        <p>Sign in with the account that was invited to this project.</p><div id="client-sign-in"></div>
+      </section>
+      <aside id="client-admin" class="cp-admin" aria-label="Private design preview" hidden></aside>
+      <section id="client-report" hidden aria-labelledby="client-project-name">
+        <header class="cp-report-header">
+          <div><p id="client-business-name" class="cp-kicker"></p><h1 id="client-project-name"></h1><p id="client-project-detail" class="cp-subtle"></p></div>
+          <div class="cp-period-controls"><label for="client-month">Reporting month</label><div class="cp-month-row"><button id="client-previous-month" type="button" aria-label="Previous month">←</button><input id="client-month" type="month" min="1000-01" max="9999-12" required /><button id="client-next-month" type="button" aria-label="Next month">→</button></div><a href="#client-ledger">Read the data &amp; methodology ↗</a></div>
+        </header>
+        <div id="client-canvas"></div>
+        <section id="client-ledger" class="cp-ledger" aria-labelledby="client-ledger-heading"></section>
+        <footer class="cp-footer"><span>Private report · For authorized viewers</span><span>Presented with unreel content</span></footer>
+      </section>
+    </main>
+    <noscript><p class="cp-status">JavaScript is needed to securely load this private report. Enable it, then reload this page.</p></noscript>
+    <script>import '../scripts/client-presentation';</script>
+  </body>
+</html>

@@ -6,6 +6,7 @@ export const OAUTH_SCOPE_LABELS = {
  'clients:read': 'Read selected client names and settings',
  'projects:read': 'Read projects', 'projects:write': 'Create and update projects',
  'themes:read': 'Read project designs and validate proposed themes', 'themes:write': 'Change project branding and report presentation without changing report data',
+ 'presentations:read': 'Read private client page designs and validate drafts', 'presentations:write': 'Save and restore private client page drafts', 'presentations:publish': 'Publish client page designs to existing authorized recipients',
  'metrics:read': 'Read metrics and observations', 'metrics:write': 'Define metrics and record observations',
  'content:read': 'Read content', 'content:write': 'Create and edit content drafts',
  'clients:write': 'Create new clients and gain access to them; update selected clients',

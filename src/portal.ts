@@ -1,3 +1,5 @@
+import { readPublishedPresentation } from './presentations.ts';
+import { filterPresentation } from './presentationSchema.ts';
 import { metricAllowedForPlugin } from './pluginMetrics.ts';
 import { readProjectPlugins, selectPlugin } from './plugins.ts';
 import { readProjectTheme } from './themes.ts';
@@ -34,7 +36,7 @@ export async function portalTargets(db: D1Database, identity: HumanIdentity) {
   return { targets: rows.filter(row => counts.get(JSON.stringify([row.client_id, row.project_id])) === 1).map(targetDTO) };
 }
 
-export async function portalReport(db: D1Database, identity: HumanIdentity, clientId: string, projectId: string, month: string, pluginKey?:string) {
+export async function portalReport(db: D1Database, identity: HumanIdentity, clientId: string, projectId: string, month: string, pluginKey?:string, includePresentation=false) {
   let range: ReturnType<typeof monthRange>, priorRange: ReturnType<typeof monthRange>, priorMonth: string;
   try { range = monthRange(month); priorMonth = previousMonth(month); priorRange = monthRange(priorMonth); }
   catch { throw new PublicError("Use a valid reporting month in YYYY-MM format."); }
@@ -65,6 +67,7 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
     .all<{ metric_id: string; period_start: string; value: number | null; quality: Quality; collected_at: string }>()).results;
   const plugin=pluginKey===undefined?null:selectPlugin(await readProjectPlugins(db,target.tenant_id,clientId,projectId),pluginKey);
   const appearance = await readProjectTheme(db,target.tenant_id,clientId,projectId);
+  const presentation=includePresentation?await readPublishedPresentation(db,target.tenant_id,{clientId,projectId}):undefined;
   // Re-query the exact surviving metric permissions immediately before building
   // the response. An unrelated surviving grant must not keep revoked metrics.
   const finalAllowed = (await db.prepare(`SELECT DISTINCT pm.metric_id ${targetJoin}
@@ -77,7 +80,7 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
   // zero rows means no access. Do not await another query after this snapshot.
   if (!finalAllowed.length) throw new PublicError("Reporting target is not available.");
   const allowedIds = new Set(finalAllowed.flatMap(row => row.metric_id === null ? [] : [row.metric_id]));
-  return { target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)&&(!plugin||(plugin.metricIds.includes(metric.id)&&metricAllowedForPlugin(plugin.key,metric)))).map(metric => {
+  return { ...(presentation?{presentation:{...presentation,document:presentation.document?filterPresentation(presentation.document,allowedIds):null}}:{}), target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)&&(!plugin||(plugin.metricIds.includes(metric.id)&&metricAllowedForPlugin(plugin.key,metric)))).map(metric => {
     const reading = (period: string) => {
       const row = readings.find(r => r.metric_id === metric.id && r.period_start === period);
       return row ? { value: row.value, quality: row.quality, collectedAt: row.collected_at } : null;

@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {defaultPresentation,type PresentationDocument} from '../../src/presentationSchema.ts';
+import {themePresets} from '../../src/themeSchema.ts';
+import {comparisonContext,renderClientPresentation,resolvePresentationDocument} from '../src/scripts/client-presentation-render.ts';
+import type {Metric,Report} from '../src/scripts/types.ts';
+import {createTestDocument,TestElement} from './presentation-dom.fixture.ts';
+const metric:Metric={id:'allowed',key:'visits',label:'Visits <img src=x onerror=alert(1)>',unit:'count',direction:'higher',current:{value:120,quality:'complete',provider:'Source <script>bad()</script>',collectedAt:'2026-11-01T01:00:00Z'},previous:{value:100,quality:'complete'},delta:20,relativePercent:20,percentagePoints:null,change:'improved',reason:null};
+const report:Report={target:{clientId:'client',projectId:'project',name:'Private report',kind:'one_off_project',status:'active'},month:'2026-10',previousMonth:'2026-09',metrics:[metric,{...metric,id:'other',label:'Other permitted metric',unit:'percent',current:{value:0,quality:'partial'},previous:null,delta:null,relativePercent:null,percentagePoints:null,change:'not_comparable',reason:'missing_or_partial_period'}]};
+function render(design:unknown){const dom=createTestDocument(),canvas=new TestElement('div'),ledger=new TestElement('section');const before=globalThis.document;Object.assign(globalThis,{document:dom.document});try{renderClientPresentation(canvas as unknown as HTMLElement,ledger as unknown as HTMLElement,report,design);}finally{Object.assign(globalThis,{document:before});}return {canvas,ledger};}
+test('all layout nodes render with trusted classes and hostile plain text stays text',()=>{
+ const design:PresentationDocument={schemaVersion:1,name:'Test',theme:themePresets.editorial,width:'edge',sections:['band'],nodes:[{id:'band',type:'band',tone:'accent',space:'generous',children:['stack']},{id:'stack',type:'stack',gap:'normal',align:'left',children:['title','divider','grid']},{id:'title',type:'text',role:'title',text:'<svg onload=alert(1)>Plain copy</svg>'},{id:'divider',type:'divider',style:'checker'},{id:'grid',type:'grid',split:'wide-left',gap:'tight',children:['fact','comparison']},{id:'fact',type:'metric',metricId:'allowed',variant:'statement'},{id:'comparison',type:'comparison',metricIds:['allowed']}]};
+ const {canvas,ledger}=render(design),all=canvas.walk();assert.equal(canvas.className,'cp-canvas cp-width-edge');assert.match(canvas.textContent,/<svg onload=alert\(1\)>/);assert.ok(all.every(node=>!['SVG','IMG','SCRIPT','IFRAME'].includes(node.tagName)));assert.ok(all.some(node=>node.className==='cp-grid cp-split-wide-left cp-gap-tight'));assert.match(canvas.textContent,/120/);assert.match(canvas.textContent,/\+20% relative/);assert.match(canvas.textContent,/October 2026/);assert.match(canvas.textContent,/Source <script>bad\(\)<\/script>/);assert.match(ledger.textContent,/Other permitted metric/);assert.ok(!canvas.textContent.includes('Other permitted metric'));assert.equal(ledger.walk().filter(node=>node.tagName==='TBODY')[0].children.length,2);
+});
+test('missing project references and recipient-pruned comparisons reveal no IDs',()=>{
+ const design=defaultPresentation();design.nodes=[{id:'band',type:'band',tone:'page',space:'normal',children:['missing','empty']},{id:'missing',type:'metric',metricId:'private-forbidden-id',variant:'stat'},{id:'empty',type:'comparison',metricIds:[]}];design.sections=['band'];
+ const {canvas,ledger}=render(design);assert.match(canvas.textContent,/This report block is unavailable/);assert.match(canvas.textContent,/No shared readings/);assert.doesNotMatch(canvas.textContent,/private-forbidden-id/);assert.doesNotMatch(ledger.textContent,/private-forbidden-id/);assert.match(ledger.textContent,/Partial|partial/);assert.match(ledger.textContent,/Missing reading/);
+});
+test('invalid trees and theme injection fall back without executing or fetching content',()=>{
+ const invalid={...defaultPresentation(),script:'fetch("https://bad.invalid")'};const fallback=resolvePresentationDocument(invalid,report);assert.equal(fallback.name,'Client report');assert.doesNotMatch(render(invalid).canvas.textContent,/bad.invalid/);
+ const badTheme={...report,appearance:{revision:1,updatedAt:null,theme:{...themePresets.night,colors:{...themePresets.night.colors,text:'url(javascript:evil)'}}}} as Report;
+ assert.equal(resolvePresentationDocument(null,badTheme).theme.name,themePresets.studio.name);
+});
+test('design transitions clear prior copy, theme attributes and private data',()=>{
+ const {document}=createTestDocument(),canvas=new TestElement('div'),ledger=new TestElement('section');const before=globalThis.document;Object.assign(globalThis,{document});
+ try{renderClientPresentation(canvas as unknown as HTMLElement,ledger as unknown as HTMLElement,report,defaultPresentation(themePresets.night));const next={...report,metrics:[]};renderClientPresentation(canvas as unknown as HTMLElement,ledger as unknown as HTMLElement,next,defaultPresentation(themePresets.editorial));assert.doesNotMatch(canvas.textContent,/Visits/);assert.doesNotMatch(ledger.textContent,/Visits/);assert.equal(canvas.getAttribute('data-project-heading'),'editorial');assert.equal(canvas.properties.get('--project-background'),themePresets.editorial.colors.background);}finally{Object.assign(globalThis,{document:before});}
+});
+test('numeric comparison reasons and neutral direction are not invented improvements',()=>{
+ assert.equal(comparisonContext({...metric,relativePercent:null,reason:'zero_baseline'}),'Relative change unavailable: zero baseline');assert.match(comparisonContext({...metric,relativePercent:null,reason:'relative_change_out_of_range'}),/numeric range/);
+ const neutral={...report,metrics:[{...metric,change:'changed',direction:'neutral'}]};const before=globalThis.document,{document}=createTestDocument();Object.assign(globalThis,{document});try{const canvas=new TestElement('div');renderClientPresentation(canvas as unknown as HTMLElement,new TestElement('div') as unknown as HTMLElement,neutral,null);assert.match(canvas.textContent,/\+20 · changed/);assert.doesNotMatch(canvas.textContent,/Comparison unavailable/);}finally{Object.assign(globalThis,{document:before});}
+});
