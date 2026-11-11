@@ -10,7 +10,7 @@ npx tsc --noEmit -p web/tsconfig.json
 node --test web/tests/*.test.ts
 ```
 
-Pages: `/` is the authenticated report or Clerk sign-in; `/invite#token=…` previews and explicitly accepts a scoped invitation after matching verified Clerk authentication. No sample-data route or real credentials are included; synthetic fixtures are restricted to browser tests.
+Pages: `/admin` is the client/project directory, `/project?tenant=…&client=…&project=…` is an admin preview, `/project?client=…&project=…` is recipient-scoped, `/` is the authenticated report or Clerk sign-in; `/invite#token=…` previews and explicitly accepts a scoped invitation after matching verified Clerk authentication. No sample-data route or real credentials are included; synthetic fixtures are restricted to browser tests.
 
 ## Clerk integration
 
@@ -20,7 +20,7 @@ Core 3 `Clerk` and the supported separate `ui` export are dynamically imported f
 
 Each API request obtains a current `clerk.session.getToken()` and sends it as a Bearer header only to local `/api/` paths. Application code does not persist tokens. Clerk manages its own authentication state. Sign-out calls Clerk directly. Session changes clear prior reports and reload authorized targets.
 
-Invitation fragment capture and removal run synchronously in the document head, before loading Clerk. The invitation stays only in application memory, never query strings or browser storage. After sign-in, authenticated `POST /api/invitations/begin {token}` returns the recipient-matched target, metric IDs, role and access expiry for review. An explicit click then sends `POST /api/invitations/accept {token}`. No GET accepts an invitation. Redirects use fixed token-free same-origin paths; when authentication redirects/reloads, the user is instructed to reopen the original email link after sign-in. Invalid/mismatched/expired/revoked invitations do not expose a scope or acceptance button. No business data writes or publication controls exist.
+Invitation fragment capture and removal run synchronously in the document head, before loading Clerk. The invitation stays only in application memory, never query strings or browser storage. After sign-in, authenticated `POST /api/invitations/begin {token}` returns the recipient-matched target, metric IDs, role and access expiry for review. An explicit click then sends `POST /api/invitations/accept {token}`. No GET accepts an invitation. Redirects use fixed token-free same-origin paths; when authentication redirects/reloads, the user is instructed to reopen the original email link after sign-in. Invalid/mismatched/expired/revoked invitations do not expose a scope or acceptance button. No report-data writes or publication controls exist. Verified administrators can separately prepare/review/send/revoke project invitations. Every recipient and metric scope is explicit; provider acceptance is never presented as confirmed delivery.
 
 Server integration must authenticate every protected route, set no-store on private responses, and configure Clerk CSP using exact approved FAPI origins and documented required services. The inline invitation bootstrap requires an exact script hash. Clerk UI uses inline styles. Application content is rendered through text nodes. The UI has no analytics and disables Clerk SDK telemetry; identity-provider network services are now required for real sign-in.
 

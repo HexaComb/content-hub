@@ -15,7 +15,7 @@ Do not add Queues, Workflows, Durable Objects, an AI model, or Supabase until a 
 
 ## Boundaries
 
-- A tenant is an agency workspace. A client belongs to one tenant.
+- User-facing navigation is Client → Project. A tenant is the internal agency security boundary; a client belongs to one tenant and every project belongs to one client.
 - Every metric and content item carries tenant and client identifiers.
 - A verified service credential establishes the tenant. Agents never select or override it in tool arguments.
 - Client grants and scopes are enforced before any client-specific query.
@@ -41,13 +41,13 @@ Video embeds and metric overlays are exploratory UI ideas, not requirements in t
 
 ## Delivery sequence
 
-### Foundation implemented in this commit
+### Current backend
 
-Worker MCP, D1 schema, client/project create/update, generic metric definitions, observations/corrections, exact monthly comparisons, service authentication and content lifecycle read/write tools. All application data writes go through MCP; credential provisioning remains an operator security boundary. This is a starter and requires deployment validation before real data.
+Worker MCP, D1 schema, client/project create/update, generic metric definitions, observations/corrections, exact monthly comparisons, service authentication and content lifecycle read/write tools. Business data and theme writes go through MCP. Browser administrators have a separate explicit project-invitation flow; it does not change report data or agent permissions. Credential provisioning remains an operator security boundary. Validate each deployment and its access configuration before adding or exposing client data.
 
-### Private reporting app implemented
+### Current reporting app
 
-Astro UI, Clerk-verified identity and separate human sessions, read-only target-scoped monthly reports, and safe invitation acceptance. Live Resend configuration remains disabled. Metric detail/history, content calendar, operator UI and fully paginated discovery remain future work.
+Astro UI, Clerk-verified identity and separate human sessions, read-only target-scoped monthly reports, and safe invitation acceptance. Live Resend configuration remains disabled. The administrator directory, standalone project preview and scoped invitation panel are implemented. Metric detail/history, content calendar and fully paginated discovery remain future work.
 
 ### Invitations implemented; publishing coordination remains
 

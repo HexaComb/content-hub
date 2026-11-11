@@ -1,6 +1,6 @@
 # unreel content
 
-An agency workspace for storing client metrics, comparing reporting periods, and making planned content available to authorized agents through MCP.
+A private client reporting app. Clients own projects, projects select the metrics they report, and invited people see only the metrics approved for them. Authorized agents manage data and project designs through MCP.
 
 ## Current implementation
 
@@ -17,7 +17,31 @@ An agency workspace for storing client metrics, comparing reporting periods, and
 - Agent-neutral content discovery with captions, asset references, publication state and linked metrics.
 - Scoped service credentials stored only as hashes, with expiry, revocation and explicit client grants.
 
-**This is an early application, not a production-ready service.** No real client data, credentials, OpenSEO integration or publishing integration is included. Email delivery is disabled until an operator configures it. Safe publisher coordination and production operations remain future work. See deployment notes for setup boundaries.
+**This is an early application with rollout limits.** The repository contains no live credentials or seeded client data. A deployment may hold real client records. Email delivery is disabled until verified and enabled, and the current checked-in Clerk configuration uses a development instance. OpenSEO collection and actual publishing remain external. See deployment notes for setup boundaries.
+
+## Understand the app
+
+- **Client:** the business, such as Hexacomb LLC.
+- **Project:** work for that client, such as Hexacomb SEO or an Instagram account. Every project must belong to a client.
+- **Metric:** a named measurement owned by the client and linked to one or more of its projects.
+- **Observation:** a value for an exact period, with source, quality and correction history.
+- **Invitation:** one person's read-only access to an exact project and selected metrics. It is not an administrator role.
+- **Tenant:** an internal agency isolation boundary. It remains in the database and authorization checks, not as an extra user-facing bucket.
+
+Start in **All Projects**, open a project to preview its page, then use **Invite client / Manage access** to review a recipient's access. Project themes change presentation only. For the complete flow, see [client project pages](docs/client-project-pages.md).
+
+## Repository map
+
+- `web/src/pages/`: the five entry pages: client home, admin directory, project, invitation acceptance and OAuth consent.
+- `web/src/components/`: shared shell/navigation and report markup.
+- `web/src/scripts/admin.ts`: client/project directory. `dashboard.ts`: shared client report and admin project preview. `project-invitations.ts`: explicit invitation review.
+- `src/adminReports.ts` and `src/adminInvitations.ts`: verified administrator reads and invitation actions.
+- `src/portal.ts`: recipient reports and project access. `humanAuth.ts`: Clerk identity verification. `auth.ts`: MCP credential/client checks.
+- `src/workspaces.ts` and `workspaceSchemas.ts`: client/project operations (legacy internal filenames, not another product object).
+- `src/repository.ts`, `domain.ts`, `content.ts`, `themes.ts`: metrics/storage, deterministic comparisons, content workflow and project design.
+- `src/index.ts`: Worker routing and MCP tool registration. `oauth*.ts`: delegated agent authorization.
+- `migrations/`: ordered, additive database changes. `tests/` and `web/tests/`: backend/security and frontend tests.
+- `docs/`: current behavior and operational boundaries. Start with [architecture](docs/architecture.md), [admin access](docs/admin.md), or [contributing](CONTRIBUTING.md).
 
 ## Stack choice
 
@@ -37,7 +61,7 @@ npm run dev
 
 `npm run check` runs backend/frontend TypeScript, domain/schema/security tests, Astro/Worker builds and Miniflare runtime integration tests. `npm run dev` uses Vite with the Cloudflare plugin; `npm run dev:web` develops the static UI alone. In restricted build environments, set `ASTRO_TELEMETRY_DISABLED=1`. The new project uses `cloudflare.config.ts`, not a Wrangler configuration. The CLI is beta and pinned through the lockfile.
 
-The database starts empty. `/` is the private portal sign-in, `/invite` accepts invitations. `/health` is public. `/mcp` rejects unauthenticated requests. There are deliberately no default live credentials or auto-created tenants. See [deployment and security](docs/deployment.md) before configuring a real instance.
+A new installation starts with an empty database. `/` is the private portal sign-in, `/invite` accepts invitations. `/health` is public. `/mcp` rejects unauthenticated requests. There are deliberately no default live credentials or auto-created tenants. See [deployment and security](docs/deployment.md) before configuring a real instance.
 
 ## MCP tools
 
@@ -84,7 +108,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 - The prototype compares exact full-month observations, not an inferred roll-up of daily values.
 - Metric definitions are immutable. New meanings or units require new keys.
 - Content tools store drafts, approval, schedules and receipts. They never publish, reserve or claim a post on an external platform.
-- Service bearer authentication is for controlled agent clients. Human browser login uses Clerk session verification, separate from MCP credentials. Standards-based MCP OAuth discovery/authorization is not implemented.
+- Service bearer authentication is for controlled agent clients. Human browser login uses Clerk session verification, separate from MCP credentials. MCP OAuth discovery/authorization is implemented with explicit operator provisioning, selected client/scope consent, PKCE and revocable delegation.
 - Client/metric discovery has explicit prototype limits (100 clients / 200 metrics). Content listing is paginated.
 - No public report sharing, external data fetching, media downloading, deletion tool or SQL execution tool is exposed.
 
