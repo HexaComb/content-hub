@@ -8,11 +8,16 @@ export default defineConfig({
     entrypoint: "./src/index.ts",
     compatibilityDate: "2026-11-10",
     previewUrls: false,
+    // Preserve the two existing production domain mappings; never preview hosts.
+    domains: [
+      { hostname: "content.unreelviews.com", production: true, previews: false },
+      { hostname: "www.content.unreelviews.com", production: true, previews: false },
+    ],
     assets: { runWorkerFirst: true, notFoundHandling: "none" },
     env: {
       DB: bindings.d1({ name: "content-hub", id: "0c416a53-1eef-415b-9e81-db37f818922e" }),
       ASSETS: bindings.assets(),
-      APP_ORIGIN: bindings.text("https://content-hub.marcode-chavez-jr.workers.dev"),
+      APP_ORIGIN: bindings.text("https://content.unreelviews.com"),
       INVITATIONS_ENABLED: bindings.text("false"),
       // Reference the already configured server secret; never store its value here.
       RESEND_API_KEY: bindings.secret(),

@@ -83,3 +83,24 @@ test('Clerk SDK optional sts conversion accepts only an independently active liv
   assert.equal(reads,0);
  }
 });
+
+test('Canonical custom-domain auth passes one exact authorized party and rejects legacy or unrelated parties',async()=>{
+ const canonicalEnv={...env,APP_ORIGIN:'https://content.unreelviews.com',ADMIN_ACCESS_ENABLED:'false',INVITATIONS_ENABLED:'false'};
+ const incoming=new Request(canonicalEnv.APP_ORIGIN+'/api/session',{headers:{'X-Forwarded-Host':'unrelated.example.test','X-Forwarded-Proto':'http'}});
+ for(const party of [canonicalEnv.APP_ORIGIN,'https://www.content.unreelviews.com','https://content-hub.marcode-chavez-jr.workers.dev','https://unrelated.example.test','http://content.unreelviews.com','https://content.unreelviews.com.evil.example.test']){
+  let sessionReads=0;
+  const identity=await getHumanIdentity(incoming,canonicalEnv,adapter({
+   async authenticate(received,options){
+    assert.equal(received,incoming);
+    // Model the SDK's authorizedParties contract without signing a JWT or
+    // accessing any real account. Host/forwarding headers cannot expand it.
+    assert.deepEqual(options,{acceptsToken:'session_token',authorizedParties:[canonicalEnv.APP_ORIGIN],issuer:canonicalEnv.CLERK_ISSUER});
+    const authorized=options.authorizedParties.includes(party);
+    return {isAuthenticated:authorized,status:authorized?'signed-in':'signed-out',toAuth:claims};
+   },
+   async getSession(){sessionReads++;return session();},
+  }));
+  if(party===canonicalEnv.APP_ORIGIN){assert.ok(identity);assert.equal(sessionReads,1);assert.equal(getAdminSession(identity,canonicalEnv),null);}
+  else{assert.equal(identity,null);assert.equal(sessionReads,0);}
+ }
+});
