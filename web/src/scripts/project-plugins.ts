@@ -3,7 +3,7 @@ export {bindPromptCopy} from './prompt-copy';
 import {instagramMetricKind} from '../../../src/instagramSchema.ts';
 import {api,post,message} from './api';
 import {createModal} from './modal';
-import {pluginCatalog,pluginApiPath,pluginPagePath,suggestedMetricIds,metricAllowedForPlugin,type PluginKey,type ProjectPlugin} from './plugin-state';
+import {pluginCatalog,pluginApiPath,pluginPagePath,suggestedMetricIds,metricAllowedForPlugin,excludedPluginMetricIds,pluginMappingWarning,type PluginKey,type ProjectPlugin} from './plugin-state';
 import type {ProjectRoute} from './project-state';
 import type {Metric,Target} from './types';
 import {buildMonthlyMetricsPrompt,currentReportingPeriod} from './plugin-prompt';
@@ -28,7 +28,7 @@ export function mountProjectPlugins(target:ProjectRoute,admin:boolean,selected:P
   const fields=el('fieldset');fields.append(el('legend','Metrics in this dashboard'));
   if(key==='instagram')fields.append(el('p','Instagram shows only Followers, Posts since month start, Average likes per post, and Posts per week. Daily follower observations supply the history chart.','plugin-notice'));
   if(!eligibleMetrics.length)fields.append(el('p',`No ${pluginCatalog[key].name} metrics are linked to this project yet. You can add this dashboard now; its metrics stay empty until matching metrics are added through MCP.`,'plugin-notice'));
-  const incompatible=config?.metricIds.filter(id=>metrics.some(metric=>metric.id===id&&(!metricAllowedForPlugin(key,metric)||(key==='instagram'&&instagramMetricKind(metric.key)===null)))).length??0;
+  const incompatible=excludedPluginMetricIds(config,metrics).length;
   if(incompatible)fields.append(el('p',`${incompatible} saved metric selection${incompatible===1?' is':'s are'} not supported by this dashboard and will not be shown. Saving removes those selections, not the underlying metrics or readings.`,'plugin-notice'));
   for(const metric of eligibleMetrics){const label=el('label');const check=el('input');check.type='checkbox';check.name='metric';check.value=metric.id;check.checked=chosen.has(metric.id);const text=el('span',`${metric.label} (${metric.unit})`);label.append(check,text);fields.append(label);}
   const help=el('p','Only compatible project metrics can be selected. SEO and Instagram metrics stay in their own dashboards. Client viewers still see only the metrics already shared with them. Hiding a plugin keeps its settings and all stored data.','plugin-notice');
@@ -72,6 +72,8 @@ export function mountProjectPlugins(target:ProjectRoute,admin:boolean,selected:P
    if(!configuration(selected)?.enabled){readiness.append(el('strong','This plugin has not been added'),el('p',admin?'Add it to choose the project metrics for this dashboard.':'Ask your project administrator to add this plugin.'));}
    else if(selected==='seo'){readiness.append(el('strong','Stored metrics · Updated through MCP'),el('p','This dashboard shows reported values saved to this project. Adding SEO does not create a live connection to OpenSEO or another search provider.'));}
    else{readiness.append(el('strong','Stored content and metrics · Meta is not connected'),el('p','Reels and posts can be tracked here. Scheduling and publication records are stored data, not an automatic publishing service.'));}
+   const mappingWarning=pluginMappingWarning(admin,configuration(selected),metrics);
+   if(mappingWarning)readiness.append(el('p',mappingWarning,'plugin-notice'));
    root.append(readiness);
   }else{
    const heading=el('div',undefined,'plugin-section-heading');const title=el('div');title.append(el('h2','Choose a dashboard'),el('p','Open SEO or Instagram to view its own metrics and content. Reports are kept separate.'));heading.append(title);

@@ -10,6 +10,9 @@ import type {InvitationEnv} from '../src/mail.ts';
 test('Instagram calendar windows use target timezone, calendar months and exact kinds',()=>{
  assert.equal(instagramMetricKind('instagram.reach'),null);
  assert.equal(instagramMetricKind('ig:avg_likes_per_post'),'average_likes_per_post');
+ assert.equal(instagramMetricKind('instagram_posts_per_week'),'posts_per_week');
+ assert.equal(instagramMetricKind('instagram_posts_per_week_avg'),'posts_per_week');
+ assert.equal(instagramMetricKind('instagram_posts_per_week_avg_estimate'),null);
  assert.equal(instagramMetricKind('instagram.followers_growth'),null);
  const windows=instagramDateWindows('America/Los_Angeles',undefined,new Date('2026-03-01T01:00:00Z'));
  assert.equal(windows.month,'2026-02');assert.equal(windows.asOfDate,'2026-02-28');
@@ -48,7 +51,7 @@ test('Instagram dashboard isolates exact metrics, histories, workflow and immuta
  const admin={issuer:env.CLERK_ISSUER!,subject:'user_admin',sessionId:'session_admin',email:'marco@hexacombllc.com'};
  const p={tenantId:'a',id:'agent',scopes:['projects:write','metrics:read','content:read','content:write']},target={clientId:'c',projectId:'p'};
  for(const key of ['followers','posts','average_likes_per_post','posts_per_week','reach']){
-  await db.prepare("INSERT INTO metrics VALUES('a','c',?,?,?,'test','count','higher','snapshot','UTC','{}','Synthetic','agent','2026-11-01')").bind(key,'instagram.'+key,key).run();
+  await db.prepare("INSERT INTO metrics VALUES('a','c',?,?,?,'test','count','higher','snapshot','UTC','{}','Synthetic','agent','2026-11-01')").bind(key,key==='posts_per_week'?'instagram_posts_per_week_avg':'instagram.'+key,key).run();
   await db.prepare("INSERT INTO project_metrics VALUES('a','c','p',?)").bind(key).run();
  }
  await setProjectPlugin(db,p,{...target,key:'instagram',enabled:true,metricIds:['followers','posts','average_likes_per_post','posts_per_week','reach'],expectedRevision:0,idempotencyKey:'install-instagram'});
@@ -60,6 +63,7 @@ test('Instagram dashboard isolates exact metrics, histories, workflow and immuta
  const packet=await getInstagramDashboard(db,p,{...target,month:'2026-10'});
  assert.equal(packet.kpis.length,4);assert.equal(packet.kpis.find(k=>k.kind==='followers')!.value,120);
  assert.equal(packet.kpis.find(k=>k.kind==='posts')!.value,42);
+ assert.equal(packet.kpis.find(k=>k.kind==='posts_per_week')!.value,42);
  assert.equal(packet.followers.points.find(p=>p.date==='2026-10-20')!.value,110);
  assert.equal(packet.followers.points.find(p=>p.date==='2026-10-21')!.value,null);
  assert.equal(packet.followers.points.at(-1)!.date,'2026-10-31');

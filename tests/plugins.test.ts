@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {Miniflare} from 'miniflare';
-import {getProjectPlugins,setProjectPlugin,setPluginInput,handleAdminPluginRequest} from '../src/plugins.ts';
+import {getProjectPlugins,setProjectPlugin,setPluginInput,handleAdminPluginRequest,readProjectPlugins} from '../src/plugins.ts';
 import {adminReport} from '../src/adminReports.ts';
 import {portalPlugins,portalReport} from '../src/portal.ts';
 import type {InvitationEnv} from '../src/mail.ts';
@@ -105,6 +105,36 @@ test('plugin configuration is explicit, scoped, revisioned and never expands rec
  await setProjectPlugin(db,p,{...input,key:'instagram',metricIds:[],expectedRevision:2,idempotencyKey:'empty-social'});
  assert.deepEqual((await adminReport(db,admin,env,'a','c','p','2026-11','instagram')).metrics,[]);
  assert.deepEqual((await db.prepare('SELECT * FROM observations ORDER BY tenant_id,id').all()).results,observationsBefore);
+ // Management reads explain legacy selections without changing stored state.
+ for(const [metric,key] of [['followers','instagram_followers'],['unlinked','instagram_posts'],['missing','instagram_posts_per_week_avg']]){
+  await db.prepare("INSERT INTO metrics VALUES('a','c',?,?,?,'test','count','higher','period_total','UTC','{}','Synthetic','agent','2026-11-01')").bind(metric,key,key).run();
+ }
+ for(const metric of ['followers','unlinked','missing'])await db.prepare("INSERT INTO project_metrics VALUES('a','c','p',?)").bind(metric).run();
+ await db.prepare("INSERT INTO project_metrics VALUES('a','c','sibling','unlinked')").run();
+ await db.prepare("UPDATE project_plugins SET metric_ids_json=? WHERE tenant_id='a' AND client_id='c' AND project_id='p' AND key='instagram'").bind(JSON.stringify(['search','followers','m','social','unlinked','missing'])).run();
+ await db.prepare("DELETE FROM project_metrics WHERE tenant_id='a' AND client_id='c' AND project_id='p' AND metric_id IN ('unlinked','missing')").run();
+ await db.prepare("DELETE FROM metrics WHERE tenant_id='a' AND client_id='c' AND id='missing'").run();
+ const snapshot=async()=>Promise.all(['project_plugins','plugin_events','observations','project_metrics','invitations','metrics','projects'].map(async table=>({table,rows:(await db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()).results})));
+ const storedBefore=await snapshot();
+ const managed=(await getProjectPlugins(db,p,target)).plugins;
+ const effective=managed.find(plugin=>plugin.key==='instagram')!;
+ assert.deepEqual(effective.metricIds,['followers']);
+ assert.deepEqual(effective.incompatibleMetricIds,['search']);
+ assert.deepEqual(effective.unavailableMetricIds,['unlinked','missing']);
+ assert.deepEqual(effective.unsupportedMetricIds,['m','social']);
+ assert.deepEqual((await (await handleAdminPluginRequest(req(),env,admin)).json() as any).plugins,managed);
+ const raw=(await readProjectPlugins(db,'a','c','p')).find(plugin=>plugin.key==='instagram')!;
+ assert.deepEqual(raw.metricIds,['search','followers','m','social','unlinked','missing']);
+ assert.equal(effective.revision,raw.revision);assert.equal(effective.updatedAt,raw.updatedAt);
+ const recipient=(await portalPlugins(db,viewer,'c','p')).plugins.find(plugin=>plugin.key==='instagram')!;
+ assert.deepEqual(recipient.metricIds,[]);
+ for(const field of ['incompatibleMetricIds','unavailableMetricIds','unsupportedMetricIds'])assert.equal(field in recipient,false);
+ assert.equal(JSON.stringify(recipient).includes('followers'),false);
+ assert.deepEqual(await snapshot(),storedBefore);
+ // An explicit empty selection stays empty, even with supported project metrics.
+ await setProjectPlugin(db,p,{...input,key:'instagram',metricIds:[],expectedRevision:3,idempotencyKey:'empty-managed-social'});
+ const empty=(await getProjectPlugins(db,p,target)).plugins.find(plugin=>plugin.key==='instagram')!;
+ for(const field of ['metricIds','incompatibleMetricIds','unavailableMetricIds','unsupportedMetricIds'] as const)assert.deepEqual(empty[field],[]);
  await db.prepare("UPDATE project_plugins SET enabled=0 WHERE tenant_id='a' AND key='seo'").run();
  await db.prepare("DELETE FROM project_metrics WHERE tenant_id='a' AND client_id='c' AND project_id='p'").run();
  assert.deepEqual((await portalPlugins(db,viewer,'c','p')).plugins.map(p=>p.key),['instagram']);

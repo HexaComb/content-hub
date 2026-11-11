@@ -3,7 +3,7 @@ import type {ProjectRoute} from './project-state';
 import {knownMetricPlugin,metricAllowedForPlugin} from '../../../src/pluginMetrics.ts';
 export {metricAllowedForPlugin};
 export type PluginKey='seo'|'instagram';
-export interface ProjectPlugin {key:PluginKey;enabled:boolean;revision:number;metricIds:string[];updatedAt?:string|null}
+export interface ProjectPlugin {key:PluginKey;enabled:boolean;revision:number;metricIds:string[];updatedAt?:string|null;incompatibleMetricIds?:string[];unavailableMetricIds?:string[];unsupportedMetricIds?:string[]}
 export const pluginCatalog={
  seo:{name:'SEO',description:'Search visibility, traffic and rankings. A dedicated home for your project’s search metrics.',short:'Search performance',symbol:'↗'},
  instagram:{name:'Instagram',description:'Reels, posts and account performance. Keep stored content and results together.',short:'Reels, posts & performance',symbol:'◎'},
@@ -29,4 +29,22 @@ export function suggestedMetricIds(key:PluginKey,metrics:{id:string;key:string}[
 export function dashboardViewState(projectPage:boolean,selected:PluginKey|null,enabled:boolean,metricCount:number){
  const report=!projectPage||(selected!==null&&enabled);
  return {report,comparisons:report&&metricCount>0};
+}
+
+/** Include management diagnostics while accepting older servers with raw IDs. */
+export function excludedPluginMetricIds(config:ProjectPlugin|undefined,metrics:{id:string;key:string}[]):string[] {
+ if(!config)return [];
+ return [...new Set([
+  ...(config.incompatibleMetricIds??[]),...(config.unavailableMetricIds??[]),...(config.unsupportedMetricIds??[]),
+  ...config.metricIds.filter(id=>{
+   const metric=metrics.find(metric=>metric.id===id);
+   return !metric||!metricAllowedForPlugin(config.key,metric)||(config.key==='instagram'&&instagramMetricKind(metric.key)===null);
+  }),
+ ])];
+}
+
+export function pluginMappingWarning(admin:boolean,config:ProjectPlugin|undefined,metrics:{id:string;key:string}[]):string|null {
+ if(!admin)return null;
+ const count=excludedPluginMetricIds(config,metrics).length;
+ return count?`${count} saved metric selection${count===1?'':'s'} cannot be used by this dashboard. Review Plugin settings. Existing metric data is unchanged.`:null;
 }

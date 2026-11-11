@@ -7,7 +7,7 @@ export const instagramMetricLabels:Record<InstagramMetricKind,string>={followers
 /** Only explicit, exact aliases. Units, labels and project names do not classify a metric. */
 export function instagramMetricKind(key:string):InstagramMetricKind|null {
  const normalized=key.toLowerCase().replace(/[.:-]/g,'_').replace(/^ig_/,'instagram_');
- const aliases:Record<string,InstagramMetricKind>={instagram_followers:'followers',instagram_follower_count:'followers',instagram_posts:'posts',instagram_posts_since_month_start:'posts',instagram_average_likes_per_post:'average_likes_per_post',instagram_avg_likes_per_post:'average_likes_per_post',instagram_posts_per_week:'posts_per_week'};
+ const aliases:Record<string,InstagramMetricKind>={instagram_followers:'followers',instagram_follower_count:'followers',instagram_posts:'posts',instagram_posts_since_month_start:'posts',instagram_average_likes_per_post:'average_likes_per_post',instagram_avg_likes_per_post:'average_likes_per_post',instagram_posts_per_week:'posts_per_week',instagram_posts_per_week_avg:'posts_per_week'};
  return aliases[normalized]??null;
 }
 /** Validate display semantics without changing generic observations. Null is a

@@ -11,7 +11,7 @@ The dedicated dashboard displays only four registered metric kinds. A metric mus
 
 Use the client's verified IANA timezone for every definition and period. The dashboard rejects a metric whose definition timezone differs from its project's client timezone. Do not silently assume UTC. Inspect the existing definitions before creating anything, and reuse the correct definitions and current project/plugin mapping.
 
-Explicit aliases use an `instagram` or `ig` namespace and `.`, `_`, `:`, or `-` separators: followers/follower_count, posts/posts_since_month_start, average_likes_per_post/avg_likes_per_post, posts_per_week. Other kinds such as reach, impressions, growth and engagement remain stored but are not displayed by this endpoint. Labels do not classify data.
+Explicit aliases use an `instagram` or `ig` namespace and `.`, `_`, `:`, or `-` separators: followers/follower_count, posts/posts_since_month_start, average_likes_per_post/avg_likes_per_post, posts_per_week/posts_per_week_avg. Keep only one metric selected for each kind; multiple selected aliases are ambiguous and do not produce a value. Other kinds such as reach, impressions, growth and engagement remain stored but are not displayed by this endpoint. Labels do not classify data.
 
 ## Reporting coverage
 

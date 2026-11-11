@@ -1,4 +1,5 @@
 import { metricAllowedForPlugin } from './pluginMetrics.ts';
+import { instagramMetricKind } from './instagramSchema.ts';
 import { z } from 'zod';
 import { id } from './schemas.ts';
 import { authorize, PublicError, type Principal } from './auth.ts';
@@ -19,13 +20,31 @@ export async function readProjectPlugins(db:D1Database,tenant:string,client:stri
  const rows=(await db.prepare('SELECT key,enabled,revision,metric_ids_json,updated_at FROM project_plugins WHERE tenant_id=? AND client_id=? AND project_id=? ORDER BY key').bind(tenant,client,project).all<{key:'seo'|'instagram';enabled:number;revision:number;metric_ids_json:string;updated_at:string}>()).results;
  return rows.map(r=>({key:r.key,enabled:!!r.enabled,revision:r.revision,metricIds:JSON.parse(r.metric_ids_json),updatedAt:r.updated_at}));
 }
+/** Management-only projection. Never attach diagnostic IDs to recipient DTOs.
+ * Reads do not rewrite legacy configuration, revisions or idempotency receipts. */
+async function readManagedProjectPlugins(db:D1Database,tenant:string,client:string,project:string) {
+ const plugins=await readProjectPlugins(db,tenant,client,project);
+ const rows=(await db.prepare('SELECT m.id,m.key FROM project_metrics pm JOIN metrics m ON m.tenant_id=pm.tenant_id AND m.client_id=pm.client_id AND m.id=pm.metric_id WHERE pm.tenant_id=? AND pm.client_id=? AND pm.project_id=?').bind(tenant,client,project).all<{id:string;key:string}>()).results;
+ const metrics=new Map(rows.map(metric=>[metric.id,metric]));
+ return plugins.map(plugin=>{
+  const metricIds:string[]=[],incompatibleMetricIds:string[]=[],unavailableMetricIds:string[]=[],unsupportedMetricIds:string[]=[];
+  for(const id of plugin.metricIds){
+   const metric=metrics.get(id);
+   if(!metric)unavailableMetricIds.push(id);
+   else if(!metricAllowedForPlugin(plugin.key,metric))incompatibleMetricIds.push(id);
+   else if(plugin.key==='instagram'&&instagramMetricKind(metric.key)===null)unsupportedMetricIds.push(id);
+   else metricIds.push(id);
+  }
+  return {...plugin,metricIds,incompatibleMetricIds,unavailableMetricIds,unsupportedMetricIds};
+ });
+}
 export function selectPlugin(plugins:Plugin[],key:string):Plugin {
  const parsed=pluginKey.safeParse(key);if(!parsed.success)throw new PublicError('Unknown project plugin.');
  const plugin=plugins.find(p=>p.key===parsed.data&&p.enabled);if(!plugin)throw new PublicError('This project plugin is not enabled.');return plugin;
 }
 export async function getProjectPlugins(db:D1Database,p:Principal,raw:z.infer<typeof pluginTargetInput>){
  const input=pluginTargetInput.parse(raw);await authorize(db,p,input.clientId,'projects:read');await target(db,p.tenantId,input.clientId,input.projectId);
- return {plugins:await readProjectPlugins(db,p.tenantId,input.clientId,input.projectId)};
+ return {plugins:await readManagedProjectPlugins(db,p.tenantId,input.clientId,input.projectId)};
 }
 async function writePlugin(db:D1Database,tenant:string,actor:string,input:z.infer<typeof setPluginInput>){
  await target(db,tenant,input.clientId,input.projectId);
@@ -57,8 +76,8 @@ export async function handleAdminPluginRequest(request:Request,env:InvitationEnv
  if(request.method==='POST'&&(request.headers.get('Origin')!==appOrigin(env)||request.headers.get('Sec-Fetch-Site')==='cross-site'||request.headers.get('Content-Type')?.split(';')[0].trim()!=='application/json'))return Response.json({error:'Request rejected.'},{status:403});
  await target(env.DB,tenant,clientId,projectId);
  if(request.method==='GET'){
+  if(!match[4])return Response.json({plugins:await readManagedProjectPlugins(env.DB,tenant,clientId,projectId)});
   const plugins=await readProjectPlugins(env.DB,tenant,clientId,projectId);
-  if(!match[4])return Response.json({plugins});
   selectPlugin(plugins,'instagram');const cursor=url.searchParams.get('cursor')??'';if(cursor)id.parse(cursor);
   const rows=(await env.DB.prepare(`SELECT c.id,c.title,c.status,c.scheduled_at AS scheduledAt,c.published_at AS publishedAt FROM content_items c WHERE c.tenant_id=? AND c.client_id=? AND c.channel='instagram' AND c.id>? AND (EXISTS(SELECT 1 FROM content_metrics cm JOIN project_metrics pm ON pm.tenant_id=cm.tenant_id AND pm.client_id=cm.client_id AND pm.metric_id=cm.metric_id WHERE cm.tenant_id=c.tenant_id AND cm.client_id=c.client_id AND cm.content_id=c.id AND pm.project_id=?) OR EXISTS(SELECT 1 FROM projects p WHERE p.tenant_id=c.tenant_id AND p.client_id=c.client_id AND p.id=? AND p.kind='instagram_account' AND p.platform_account_ref=c.account_ref)) ORDER BY c.id LIMIT 51`).bind(tenant,clientId,cursor,projectId,projectId).all<{id:string;title:string;status:string;scheduledAt:string|null;publishedAt:string|null}>()).results;
   return Response.json({items:rows.slice(0,50).map(r=>({...r,kind:null})),nextCursor:rows.length>50?rows[49].id:null});
