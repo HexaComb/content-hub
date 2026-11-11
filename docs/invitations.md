@@ -2,9 +2,9 @@
 
 ## Implemented, disabled until configured
 
-The Astro portal, Resend transport, invitation lifecycle and passwordless email verification are implemented. Live mail is disabled by default. No sender, Resend key, recipient or agent credential is included. Local tests use synthetic records and fake mail only.
+The Astro portal, Resend transport, invitation lifecycle and Clerk-verified acceptance are implemented. Live mail is disabled by default. No sender, Resend key, recipient or agent credential is included. Local tests use synthetic records and fake mail only.
 
-A recipient receives read-only access to one Instagram account or one-off project and a frozen set of approved metric IDs. The accepted invitation is the grant. Acceptance never creates a service principal or client-wide membership. Browser sessions and MCP bearer credentials are separate.
+A recipient receives read-only access to one Instagram account or one-off project and a frozen set of approved metric IDs. The accepted invitation is the grant, bound to Clerk issuer and user ID. Acceptance never creates a service principal or client-wide membership. Browser sessions and MCP bearer credentials are separate.
 
 ## Operator workflow through MCP
 
@@ -16,17 +16,17 @@ An agent must obtain actual user authorization; the boolean is an attestation, n
 
 ## Recipient flow
 
-- The link uses an unguessable 32-byte token in a URL fragment. `/invite` captures it in memory and immediately removes the fragment. There is no browser storage, third-party script, analytics or GET redemption.
-- Clicking acceptance sends a verification code only to the stored recipient. A forwarded invitation link alone cannot grant access.
-- Submitting the 16-character random code explicitly accepts. D1 performs a conditional transaction: simultaneous redemptions produce one winner. Invitation and code expiry, attempts, revocation, current inviter authority and unchanged target revision are rechecked.
-- The session cookie is Secure, HttpOnly, SameSite=Strict and host-only, with a 12-hour lifetime. Invitation lifetime is 48 hours; verification codes last 10 minutes with at most five attempts. Codes and raw tokens are never stored in the database.
-- Subsequent login uses email verification. Its generic response is independent of account eligibility and mail latency; identity lookup and mail run in `ctx.waitUntil`. IP and recipient throttles apply. Logout revokes the session.
+- The link uses an unguessable 32-byte token in a URL fragment. `/invite` captures it in memory and immediately removes the fragment. There is no browser token storage, analytics or GET redemption.
+- The recipient signs in with Clerk. The Worker verifies the current session, exact configured issuer/origin and verified primary email. A forwarded invitation alone cannot grant access.
+- Authenticated preview and explicit acceptance require that verified email to match the stored recipient. D1 conditionally binds the invitation to the verified issuer and stable user ID; concurrent acceptance has one winner. Expiry, revocation, inviter authority, target revision and metric mappings are rechecked.
+- No custom email code or Content Hub session cookie is issued. Clerk handles browser login/signout; legacy passwordless routes and cookies cannot authenticate the new flow.
+- Invitation lifetime is 48 hours. Approved access expiry is independent. Read permission follows the bound stable identity and the current D1 grant, not a mutable email address.
 
-Resend transports email; it is not the authorization system. The application verifies possession of the exact invitation address. Email normalization trims and lowercases only, without rewriting aliases or dots.
+Clerk onboarding is separate from Content Hub permissions. A recipient without a Clerk account needs an authorized provider invitation/provisioning step in the invite-only instance; this application never automatically creates provider users or invitations. See [Clerk setup](clerk.md).
 
 ## Reporting boundary
 
-Every report checks the live session and grants in D1. Visible metrics are the intersection of the invitation's frozen IDs and the target's current metric mappings. Adding a new metric never expands an existing grant. Removing a mapping or revoking a grant takes effect on subsequent requests. Reports recheck exact surviving metric IDs immediately before returning data.
+Every report starts with current Clerk session verification and checks its bound grants in D1. Visible metrics are the intersection of the invitation's frozen IDs and the target's current metric mappings. Adding a new metric never expands an existing grant. Removing a mapping or revoking a grant takes effect on subsequent requests. Reports recheck exact surviving metric IDs immediately before returning data.
 
 The portal returns target identity, metric labels/units, values, quality, collection timestamps and two-period comparisons. It does not expose client-wide lists, internal notes, raw source URLs, dimensions, content drafts, captions, audit records or credentials. Instagram identity is immutable through the application; use a new target rather than repointing existing access.
 
@@ -47,16 +47,16 @@ Delivery is not blindly retried. A logical send is recorded before calling Resen
 
 ## Tests and remaining operations
 
-Tests cover tenant/target isolation, frozen scopes, partial revocation during a report, wrong/expired/exhausted codes, missing inviter authority, duplicate acceptance, uncertain delivery, generic login timing, cookie flags, request limits and CSRF. The static frontend has build/type/format checks and a mocked Playwright flow suite; run that suite in a compatible Chromium environment.
+Tests cover tenant/target isolation, frozen scopes, partial revocation during a report, verified recipient/identity matching, missing inviter authority, duplicate acceptance, uncertain delivery, disabled authentication, admin allowlisting, request limits and CSRF. Clerk verification is mocked locally. The static frontend has build/type/format checks and a browser test harness; live provider UI needs an approved configured test instance.
 
-Before real client use: approve/provision service credentials, review shareable data, verify sender domain, run an authorized end-to-end delivery check, add upstream abuse controls, define cleanup/retention for expired challenges and rate-limit buckets, and test backup/restore. Public report links, exports, admin UI, delivery webhooks, and automatic publishing are not implemented.
+Before real client use: approve/provision service credentials, review shareable data, verify sender domain, run an authorized end-to-end delivery check, add upstream abuse controls, define cleanup/retention for invitation and rate-limit records, and test backup/restore. Public report links, exports, admin UI, delivery webhooks, and automatic publishing are not implemented.
 
 References: [Resend send API](https://resend.com/docs/api-reference/emails/send-email), [restricted keys](https://resend.com/docs/api-reference/api-keys/create-api-key).
 
 ## Super-admin boundary
 
-Only `christian@unreelviews.com` and `marco@hexacombllc.com` are eligible for super-admin authorization. Eligibility alone is not authentication: a matching email typed in a form never grants access. The server requires a live, email-verified session and the separately controlled `ADMIN_ACCESS_ENABLED=true` gate. That gate defaults to false.
+Only `christian@unreelviews.com` and `marco@hexacombllc.com` are eligible for super-admin authorization. Eligibility alone is not authentication: a matching email typed in a form never grants access. The server requires a live, Clerk-verified session and the separately controlled `ADMIN_ACCESS_ENABLED=true` gate. That gate defaults to false.
 
 There is no public admin registration, invitation-to-admin conversion, promotion, role-edit, domain-wide wildcard, or arbitrary admin-list endpoint. Names, email-domain matches and caller-supplied role claims confer no privilege. Current authorization is calculated server-side on each request; expired/revoked sessions fail closed. Invited clients keep exact target/metric viewer access and never become administrators by accepting an invitation.
 
-This establishes the admin authorization boundary, not an administrative CRUD interface. All business-data writes remain through separately authorized MCP service principals. No real admin session, service credential or recipient access is bootstrapped by code or migration. Enabling admin authentication and provisioning service credentials remain deliberate operator actions.
+This establishes the admin authorization boundary, not an administrative CRUD interface. All business-data writes remain through separately authorized MCP service principals. No real admin session, service credential or recipient access is bootstrapped by code or migration. Enabling Clerk/admin authentication and provisioning service credentials remain deliberate operator actions.

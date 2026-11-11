@@ -6,8 +6,8 @@ An agency workspace for storing client metrics, comparing reporting periods, and
 
 - Cloudflare Worker with a stateless remote MCP endpoint at `/mcp`.
 - Cloudflare D1 schema with tenant and client boundaries.
-- Static Astro client portal, target/month selection, private metric comparisons and a clearly synthetic `/demo`.
-- Target-scoped invitations, passwordless recipient verification and Resend transport (disabled until configured).
+- Static Astro client portal, target/month selection, private metric comparisons.
+- Target-scoped invitations, Clerk-verified recipient identity and Resend transport (disabled until configured).
 - Fail-closed super-admin eligibility for the two explicitly named operators only, requiring verified sessions and separate enablement. No public admin signup or promotion.
 - Arbitrary metric definitions and numeric observations. Instagram and SEO are categories, not hardcoded tables.
 - Source attribution, collection timestamps, missing/partial data, idempotent ingestion and append-only corrections.
@@ -36,7 +36,7 @@ npm run dev
 
 `npm run check` runs backend/frontend TypeScript, domain/schema/security tests, Astro/Worker builds and Miniflare runtime integration tests. `npm run dev` uses Vite with the Cloudflare plugin; `npm run dev:web` develops the static UI alone. In restricted build environments, set `ASTRO_TELEMETRY_DISABLED=1`. The new project uses `cloudflare.config.ts`, not a Wrangler configuration. The CLI is beta and pinned through the lockfile.
 
-The database starts empty. `/` is the private portal sign-in, `/invite` accepts invitations, and `/demo` contains synthetic data only. `/health` is public. `/mcp` rejects unauthenticated requests. There are deliberately no default live credentials or auto-created tenants. See [deployment and security](docs/deployment.md) before configuring a real instance.
+The database starts empty. `/` is the private portal sign-in, `/invite` accepts invitations. `/health` is public. `/mcp` rejects unauthenticated requests. There are deliberately no default live credentials or auto-created tenants. See [deployment and security](docs/deployment.md) before configuring a real instance.
 
 ## MCP tools
 
@@ -69,6 +69,7 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 - [Metric semantics and reporting](docs/metrics.md)
 - [Content lifecycle and safe agent coordination](docs/content.md)
 - [Private client invitations and Resend setup](docs/invitations.md)
+- [Clerk authentication setup and cutover](docs/clerk.md)
 - [Deployment, access control and readiness](docs/deployment.md)
 - [Synthetic MCP examples](examples/metric-workflow.json)
 
@@ -77,6 +78,6 @@ An agent can obtain numbers from OpenSEO or another source, then call `record_ob
 - The prototype compares exact full-month observations, not an inferred roll-up of daily values.
 - Metric definitions are immutable. New meanings or units require new keys.
 - Content tools store drafts, approval, schedules and receipts. They never publish, reserve or claim a post on an external platform.
-- Service bearer authentication is for controlled agent clients. Human browser login uses separate email-verified sessions. Standards-based MCP OAuth discovery/authorization is not implemented.
+- Service bearer authentication is for controlled agent clients. Human browser login uses Clerk session verification, separate from MCP credentials. Standards-based MCP OAuth discovery/authorization is not implemented.
 - Client/metric discovery has explicit prototype limits (100 clients / 200 metrics). Content listing is paginated.
 - No public report sharing, external data fetching, media downloading, deletion tool or SQL execution tool is exposed.

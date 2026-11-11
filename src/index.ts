@@ -12,7 +12,8 @@ import { createClient, updateClient, createProject, updateProject, listProjects 
 import { createClientInput, updateClientInput, createProjectInput, updateProjectInput, listProjectsInput } from "./workspaceSchemas.ts";
 import { invitations, handleInvitationRequest } from "./invitations.ts";
 import { prepareInvitationInput, sendInvitationInput, listInvitationsInput, revokeInvitationInput } from "./invitationSchemas.ts";
-import { getSession, portalTargets, portalReport } from "./portal.ts";
+import { portalTargets, portalReport } from "./portal.ts";
+import { getHumanIdentity, clerkConfiguration } from "./humanAuth.ts";
 import type { InvitationEnv } from "./mail.ts";
 import { getAdminSession } from "./admin.ts";
 
@@ -81,14 +82,20 @@ export default {
     if (url.pathname === "/health" && request.method === "GET") return Response.json({ status: "ok", service: "content-hub", stage: "prototype" });
     if (url.pathname.startsWith("/api/")) {
       try {
-        if (["/api/invitations/begin", "/api/invitations/accept", "/api/login/begin", "/api/login/verify", "/api/logout"].includes(url.pathname))
-          return secureResponse(await handleInvitationRequest(request, env, undefined, task => ctx.waitUntil(task)), true);
+        if (["/api/login/begin", "/api/login/verify", "/api/logout"].includes(url.pathname))
+          return secureResponse(Response.json({ error: "Not found." }, { status: 404 }), true);
+        if (["/api/invitations/begin", "/api/invitations/accept"].includes(url.pathname))
+          return secureResponse(await handleInvitationRequest(request, env), true);
         if (request.method !== "GET") return secureResponse(Response.json({ error: "Method not allowed." }, { status: 405 }), true);
-        const session = await getSession(env.DB, request);
+        if (url.pathname === "/api/auth/config") {
+          const auth = clerkConfiguration(env);
+          return secureResponse(auth ? Response.json({ provider: "clerk", publishableKey: auth.publishableKey, frontendApiUrl: auth.issuer }) : Response.json({ error: "Authentication unavailable." }, { status: 503 }), true);
+        }
+        const session = await getHumanIdentity(request, env);
         if (url.pathname === "/api/session") return secureResponse(Response.json(session ? { authenticated: true, email: session.email } : { authenticated: false }), true);
         if (!session) return secureResponse(Response.json({ error: "Sign in to continue." }, { status: 401 }), true);
         if (url.pathname === "/api/admin/session") {
-          const admin = await getAdminSession(env.DB, request, env);
+          const admin = getAdminSession(session, env);
           return secureResponse(admin ? Response.json({ authenticated: true, ...admin }) : Response.json({ error: "Administrator access is unavailable." }, { status: 403 }), true);
         }
         if (url.pathname === "/api/targets") return secureResponse(Response.json(await portalTargets(env.DB, session)), true);
@@ -106,7 +113,7 @@ export default {
     if (url.pathname !== "/mcp") {
       if (!["GET", "HEAD"].includes(request.method)) return new Response("Method not allowed", { status: 405 });
       if (!env.ASSETS) return new Response("Portal is not configured", { status: 503 });
-      return secureResponse(await env.ASSETS.fetch(request), !url.pathname.startsWith("/_astro/"));
+      return secureResponse(await env.ASSETS.fetch(request), !url.pathname.startsWith("/_astro/"), env);
     }
     // Service-to-service prototype: do not open cross-origin browser access.
     if (request.headers.has("Origin") && request.headers.get("Origin") !== url.origin) return new Response("Forbidden origin", { status: 403 });
@@ -142,13 +149,18 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-function secureResponse(response: Response, privateResponse = false): Response {
+function secureResponse(response: Response, privateResponse = false, env?: Env): Response {
   const headers = new Headers(response.headers);
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'sha256-2Y5iDfkTLtN47Xi7k3V88gxx3er2ah3Jo/4vkmnHjq8='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  const auth = env ? clerkConfiguration(env) : null;
+  // Clerk's exact instance origin plus its documented abuse-protection namespace.
+  // No arbitrary HTTPS wildcard or caller-controlled CSP values are accepted.
+  const clerk = auth ? ` ${auth.issuer} https://*.protect.clerk.com https://challenges.cloudflare.com` : "";
+  const connect = auth ? ` ${auth.issuer} https://*.protect.clerk.com:* https://challenges.cloudflare.com` : "";
+  headers.set("Content-Security-Policy", `default-src 'self'; script-src 'self' 'sha256-2Y5iDfkTLtN47Xi7k3V88gxx3er2ah3Jo/4vkmnHjq8='${clerk}; style-src 'self' 'unsafe-inline'; img-src 'self' data:${auth ? " https://img.clerk.com" : ""}; font-src 'self'; connect-src 'self'${connect}; frame-src 'self'${clerk}; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`);
   if (privateResponse) headers.set("Cache-Control", "no-store");
   return new Response(response.body, { status: response.status, headers });
 }

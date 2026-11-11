@@ -1,7 +1,0 @@
-import type {Target,Report} from './types';
-export const targets:Target[]=[{clientId:'synthetic',projectId:'studio',name:'Studio Evergreen',kind:'instagram_account',platformAccountRef:'@studio.evergreen.example',status:'active'},{clientId:'synthetic',projectId:'launch',name:'The Autumn Launch',kind:'one_off_project',status:'active'}];
-export function sampleReport(target:Target,month:string):Report {
- const [y,m]=month.split('-').map(Number); const previousMonth=`${m===1?y-1:y}-${String(m===1?12:m-1).padStart(2,'0')}`;
- const specs=target.projectId==='studio' ? [['Reach','count',48260,40800],['Engagement rate','percent',4.8,4.1],['Followers','count',12480,11920],['Content published','count',18,16]] : [['Landing page views','count',8240,6200],['Conversion rate','percent',3.2,2.8],['Sign-ups','count',264,174],['Assets delivered','count',12,10]];
- return {target,month,previousMonth,metrics:specs.map(([label,unit,c,p],i)=>({id:`demo-${i}`,key:`sample_${i}`,label:String(label),unit:String(unit),direction:'higher',current:{value:Number(c),quality:i===3?'partial':'complete',collectedAt:`${month}-28T12:00:00Z`,provider:'Synthetic sample'},previous:{value:Number(p),quality:'complete',collectedAt:`${previousMonth}-28T12:00:00Z`,provider:'Synthetic sample'},delta:i===3?null:Number(c)-Number(p),relativePercent:i===3?null:(Number(c)-Number(p))/Number(p)*100,percentagePoints:unit==='percent'?Number(c)-Number(p):null,change:i===3?'not_comparable':'improved',reason:i===3?'missing_or_partial_period':null}))};
-}

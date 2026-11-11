@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { Miniflare } from 'miniflare';
 import { invitations, handleInvitationRequest } from '../src/invitations.ts';
-import { getSession, portalTargets, portalReport } from '../src/portal.ts';
+import { portalTargets, portalReport } from '../src/portal.ts';
+import type { HumanIdentity } from '../src/humanAuth.ts';
 import { sha256 } from '../src/domain.ts';
 import { invitationMail, type MailMessage, type InvitationEnv } from '../src/mail.ts';
 
-test('invitations: passwordless verification, atomic scope, isolation and durable delivery', async t => {
+test('invitations: Clerk identity binding, atomic scope, isolation and durable delivery', async t => {
  const mf=new Miniflare({workers:[{config:{name:'invitation-tests',compatibilityDate:'2026-11-10',manifest:{mainModule:'index.js',modules:{'index.js':{type:'esm',contents:"export default {fetch(){return new Response('ok')}}"}}},env:{DB:{type:'d1',name:'invitation-tests'}}}}]});
  t.after(()=>mf.dispose());
  const db=await mf.getD1Database('DB') as unknown as D1Database;
@@ -28,125 +29,69 @@ test('invitations: passwordless verification, atomic scope, isolation and durabl
   await db.prepare("INSERT INTO observations VALUES('t','c',?,?,'2026-10-01','2026-11-01',1,42,'complete',?, '2026-11-01','2026-11-01','p',?,'hash',NULL)").bind(id,id,JSON.stringify({url:'https://internal.invalid/secret',notes:'secret'}),id).run();
  }
  const principal={tenantId:'t',id:'p',scopes};
- const env:InvitationEnv={DB:db,APP_ORIGIN:'https://reports.example.test'};
+ const env:InvitationEnv={DB:db,APP_ORIGIN:'https://reports.example.test',CLERK_AUTH_ENABLED:'true',CLERK_ISSUER:'https://clerk.example.test',CLERK_PUBLISHABLE_KEY:'pk_test_'+btoa('clerk.example.test$').replaceAll('=',''),CLERK_SECRET_KEY:'synthetic-test-only'};
+ const actor:HumanIdentity={issuer:env.CLERK_ISSUER!,subject:'user_viewer',sessionId:'sess_viewer',email:'viewer@example.test'};
  const messages:MailMessage[]=[];
  const mail={async send(message:MailMessage){messages.push(message);return {id:'fake-'+messages.length};}};
  const repo=invitations(db,principal,env,mail);
- const prepare=()=>repo.prepareInvitation({clientId:'c',projectId:'project',recipient:'Viewer@example.test',metricIds:['approved'],grantExpiresAt:new Date(Date.now()+86400000).toISOString()});
- const send=async()=>{const p=await prepare();await repo.sendInvitation({invitationId:p.invitationId,approvalDigest:p.approvalDigest,explicitlyApproved:true});return {id:p.invitationId,token:messages.at(-1)!.text.match(/#token=([\w-]+)/)![1]};};
- let ip=0;
- const request=(path:string,body:unknown,cookie='',override:Record<string,string>={})=>new Request(env.APP_ORIGIN+path,{method:'POST',headers:{Origin:env.APP_ORIGIN!,'Content-Type':'application/json','CF-Connecting-IP':String(++ip),Cookie:cookie,...override},body:JSON.stringify(body)});
- const post=async(path:string,body:unknown,cookie='',override:Record<string,string>={})=>{const tasks:Promise<void>[]=[];const response=await handleInvitationRequest(request(path,body,cookie,override),env,mail,task=>{tasks.push(task);});await Promise.all(tasks);return response;};
- const begin=async(token:string)=>{const res=await post('/api/invitations/begin',{token});const cookie=res.headers.get('set-cookie')!.split(';')[0];const code=messages.at(-1)!.text.match(/code is ([a-f0-9]{16})/)![1];return {cookie,code};};
+ const prepare=(metricIds=['approved'])=>repo.prepareInvitation({clientId:'c',projectId:'project',recipient:'Viewer@example.test',metricIds,grantExpiresAt:new Date(Date.now()+86400000).toISOString()});
+ const send=async(metricIds=['approved'])=>{const prepared=await prepare(metricIds);await repo.sendInvitation({invitationId:prepared.invitationId,approvalDigest:prepared.approvalDigest,explicitlyApproved:true});const token=messages.at(-1)!.text.match(/#token=([A-Za-z0-9_-]+)/)![1];return {id:prepared.invitationId,token};};
+ let requestNumber=0;
+ const post=(path:string,body:unknown,identity:HumanIdentity|null=actor,headers:Record<string,string>={})=>handleInvitationRequest(new Request(env.APP_ORIGIN+path,{method:'POST',headers:{Origin:env.APP_ORIGIN!,'Content-Type':'application/json','CF-Connecting-IP':'test-'+requestNumber++,...headers},body:JSON.stringify(body)}),env,mail,identity);
+ await assert.rejects(()=>invitations(db,{...principal,scopes:['metrics:write']},env,mail).prepareInvitation({clientId:'c',projectId:'project',recipient:actor.email,metricIds:['approved'],grantExpiresAt:new Date(Date.now()+86400000).toISOString()}));
  assert.throws(()=>invitationMail(env));
- await assert.rejects(invitations(db,{...principal,scopes:['metrics:write']},env,mail).prepareInvitation({clientId:'c',projectId:'project',recipient:'a@example.test',metricIds:['approved'],grantExpiresAt:new Date(Date.now()+86400000).toISOString()}));
- await assert.rejects(repo.prepareInvitation({clientId:'c',projectId:'project',recipient:'a@example.test',metricIds:['missing'],grantExpiresAt:new Date(Date.now()+86400000).toISOString()}));
- const prepared=await prepare();
- await assert.rejects(repo.sendInvitation({invitationId:prepared.invitationId,approvalDigest:'b'.repeat(64),explicitlyApproved:true}));
- assert.equal(messages.length,0);
  const invite=await send();
- assert.equal(invite.token.length,43);
- assert.equal(messages.at(-1)!.to,'viewer@example.test');
- const saved=await db.prepare('SELECT * FROM invitations WHERE id=?').bind(invite.id).first();
- assert.equal(saved!.token_hash,await sha256(invite.token));
- assert.ok(!JSON.stringify(saved).includes(invite.token));
- assert.equal((await handleInvitationRequest(new Request(env.APP_ORIGIN+'/api/invitations/accept?token='+invite.token),env,mail)).status,405);
- assert.equal((await post('/api/invitations/begin',{token:invite.token},'',{Origin:'https://attacker.test'})).status,403);
- const challenge=await begin(invite.token);
- assert.equal(messages.at(-1)!.to,'viewer@example.test');
- assert.equal((await post('/api/invitations/accept',{code:challenge.code,email:'attacker@example.test'},challenge.cookie)).status,400);
- assert.equal((await post('/api/invitations/accept',{code:'0'.repeat(16)},challenge.cookie)).status,400);
- const winners=await Promise.all([post('/api/invitations/accept',{code:challenge.code},challenge.cookie),post('/api/invitations/accept',{code:challenge.code},challenge.cookie)]);
- assert.deepEqual(winners.map(r=>r.status).sort(),[200,400]);
- const response=winners.find(r=>r.status===200)!;
- const setCookie=response.headers.get('set-cookie')!;
- assert.match(setCookie,/HttpOnly/);assert.match(setCookie,/Secure/);assert.match(setCookie,/SameSite=Strict/);
- const sessionCookie=setCookie.match(/__Host-ch_session=[^;]+/)![0];
- const session=await getSession(db,new Request(env.APP_ORIGIN!,{headers:{Cookie:sessionCookie}}));assert.ok(session);
- assert.equal(await getSession(db,new Request(env.APP_ORIGIN!,{headers:{Cookie:sessionCookie+'; '+sessionCookie}})),null);
- assert.equal((await portalTargets(db,session)).targets.length,1);
- await assert.rejects(portalReport(db,session,'c','sibling','2026-10'));
- await assert.rejects(portalReport(db,session,'other','project','2026-10'));
- const report=await portalReport(db,session,'c','project','2026-10');
- assert.deepEqual(report.metrics.map(m=>m.id),['approved']);assert.equal(report.metrics[0].current!.value,42);assert.equal(report.target.name,'project');
- assert.ok(!JSON.stringify(report).includes('secret'));assert.ok(!JSON.stringify(report).includes('definition'));assert.ok(!JSON.stringify(report).includes('source'));
- assert.equal((await db.prepare('SELECT count(*) n FROM client_grants').first())!.n,1);
- // Revoke grant A after observations were fetched while grant B survives.
- const second=await repo.prepareInvitation({clientId:'c',projectId:'project',recipient:'viewer@example.test',metricIds:['unapproved'],grantExpiresAt:new Date(Date.now()+86400000).toISOString()});
- await db.prepare("UPDATE invitations SET accepted_at='2026-01-01' WHERE id=?").bind(second.invitationId).run();
- let interrupted=false;
- const racingDb=new Proxy(db,{get(target,key){
-  if(key!=='prepare') { const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value; }
-  return (sql:string)=>{
-   const wrap=(statement:D1PreparedStatement):D1PreparedStatement=>new Proxy(statement,{get(st,k){
-    if(k==='bind')return (...args:unknown[])=>wrap(st.bind(...args));
-    if(k==='all'&&sql.includes('SELECT o.metric_id'))return async()=>{const rows=await st.all();if(!interrupted){interrupted=true;await repo.revokeInvitation({clientId:'c',invitationId:invite.id});}return rows;};
-    const value=Reflect.get(st,k);return typeof value==='function'?value.bind(st):value;
-   }});
-   return wrap(target.prepare(sql));
-  };
- }});
- const racedReport=await portalReport(racingDb,session,'c','project','2026-10');
- assert.equal(interrupted,true);assert.deepEqual(racedReport.metrics.map(m=>m.id),['unapproved']);
- await db.prepare('UPDATE invitations SET revoked_at=NULL WHERE id=?').bind(invite.id).run();
- await repo.revokeInvitation({clientId:'c',invitationId:second.invitationId});
- // Known and unknown login addresses get the same immediate response;
- // database lookup and slow provider delivery happen only in dispatched work.
- let releaseMail!:()=>void;
- const mailBlocked=new Promise<void>(resolve=>{releaseMail=resolve;});
- let mailEntered=false;
- const pendingTasks:Promise<void>[]=[];
- const slowMail={async send(message:MailMessage){mailEntered=true;await mailBlocked;return {id:'delayed-fake'};}};
- let timer:ReturnType<typeof setTimeout>|undefined;
- const knownResponse=await Promise.race([
-  handleInvitationRequest(request('/api/login/begin',{email:'viewer@example.test'}),env,slowMail,task=>{pendingTasks.push(task);}),
-  new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Login response waited for mail')),3000);}),
- ]).finally(()=>{clearTimeout(timer);releaseMail();});
- const unknownTasks:Promise<void>[]=[];
- const unknownResponse=await handleInvitationRequest(request('/api/login/begin',{email:'unknown@example.test'}),env,slowMail,task=>{unknownTasks.push(task);});
- assert.equal(knownResponse.status,unknownResponse.status);
- assert.deepEqual(await knownResponse.json(),await unknownResponse.json());
- assert.match(knownResponse.headers.get('set-cookie')!,/__Host-ch_login=/);
- assert.match(unknownResponse.headers.get('set-cookie')!,/__Host-ch_login=/);
- await Promise.all([...pendingTasks,...unknownTasks]);assert.equal(mailEntered,true);
- const loginResponse=await post('/api/login/begin',{email:'VIEWER@example.test'});
- const loginCookie=loginResponse.headers.get('set-cookie')!.split(';')[0];
- const loginCode=messages.at(-1)!.text.match(/code is ([a-f0-9]{16})/)![1];
- assert.equal(messages.at(-1)!.to,'viewer@example.test');
- assert.equal((await post('/api/login/verify',{code:'0'.repeat(16)},loginCookie)).status,400);
- const loginWinners=await Promise.all([post('/api/login/verify',{code:loginCode},loginCookie),post('/api/login/verify',{code:loginCode},loginCookie)]);
- assert.deepEqual(loginWinners.map(r=>r.status).sort(),[200,400]);
- const repeatCookie=loginWinners.find(r=>r.status===200)!.headers.get('set-cookie')!.match(/__Host-ch_session=[^;]+/)![0];
- assert.ok(await getSession(db,new Request(env.APP_ORIGIN!,{headers:{Cookie:repeatCookie}})));
- await post('/api/logout',{},repeatCookie);
- assert.equal(await getSession(db,new Request(env.APP_ORIGIN!,{headers:{Cookie:repeatCookie}})),null);
- const emailCount=messages.length;await post('/api/login/begin',{email:'unknown@example.test'});assert.equal(messages.length,emailCount);
+ assert.equal(messages[0].to,actor.email);
+ assert.equal((await post('/api/invitations/begin',{token:invite.token},null)).status,401);
+ assert.equal((await post('/api/invitations/begin',{token:invite.token},{...actor,email:'other@example.test'})).status,400);
+ assert.equal((await post('/api/invitations/begin',{token:invite.token,role:'super_admin'})).status,400);
+ const preview=await post('/api/invitations/begin',{token:invite.token});
+ assert.equal(preview.status,200);assert.equal(preview.headers.get('Cache-Control'),'no-store');
+ const previewText=await preview.text();assert.ok(!previewText.includes(invite.token));assert.ok(!previewText.includes('Internal secret'));
+ assert.equal((await handleInvitationRequest(new Request(env.APP_ORIGIN+'/api/invitations/accept'),env,mail,actor)).status,405);
+ assert.equal((await post('/api/invitations/accept',{token:invite.token},actor,{Origin:'https://evil.example'})).status,403);
+ const accepted=await Promise.all([post('/api/invitations/accept',{token:invite.token}),post('/api/invitations/accept',{token:invite.token})]);
+ assert.deepEqual(accepted.map(r=>r.status).sort(),[200,400]);
+ assert.ok(accepted.every(r=>!r.headers.has('Set-Cookie')));
+ assert.equal((await db.prepare('SELECT count(*) n FROM human_sessions').first<{n:number}>())!.n,0);
+ assert.equal((await db.prepare('SELECT count(*) n FROM invitation_challenges').first<{n:number}>())!.n,0);
+ const bound=await db.prepare('SELECT accepted_identity_issuer issuer,accepted_identity_subject subject FROM invitations WHERE id=?').bind(invite.id).first();
+ assert.deepEqual(bound,{issuer:actor.issuer,subject:actor.subject});
+ await assert.rejects(()=>db.prepare("UPDATE invitations SET accepted_identity_subject='other' WHERE id=?").bind(invite.id).run(),/immutable/);
+ assert.equal((await portalTargets(db,actor)).targets.length,1);
+ assert.deepEqual((await portalTargets(db,{...actor,subject:'other_user'})).targets,[]);
+ assert.deepEqual((await portalTargets(db,{...actor,issuer:'https://other.example'})).targets,[]);
+ // A changed verified email cannot transfer a grant to another Clerk user.
+ assert.equal((await portalTargets(db,{...actor,email:'changed@example.test'})).targets.length,1);
+ const report=await portalReport(db,actor,'c','project','2026-10');
+ assert.deepEqual(report.metrics.map(m=>m.id),['approved']);
+ assert.equal(report.metrics[0].current?.value,42);
+ const dto=JSON.stringify(report);for(const secret of ['Internal secret','Private definition','internal.invalid','notes','source_json',invite.token,'token_hash'])assert.ok(!dto.includes(secret));
+ await assert.rejects(()=>portalReport(db,actor,'c','sibling','2026-10'));
+ await assert.rejects(()=>portalReport(db,actor,'wrong-client','project','2026-10'));
  await db.prepare("DELETE FROM project_metrics WHERE metric_id='approved'").run();
- assert.deepEqual((await portalReport(db,session,'c','project','2026-10')).metrics,[]);
+ assert.deepEqual((await portalReport(db,actor,'c','project','2026-10')).metrics,[]);
  await db.prepare("INSERT INTO project_metrics VALUES('t','c','project','approved')").run();
- const before=messages.length;await post('/api/invitations/begin',{token:invite.token});assert.equal(messages.length,before);
- await repo.revokeInvitation({clientId:'c',invitationId:invite.id});
- assert.deepEqual((await portalTargets(db,session)).targets,[]);await assert.rejects(portalReport(db,session,'c','project','2026-10'));
- for(const mutation of ["revoked_at='2026-01-01'","invite_expires_at='2020-01-01'","target_revision=999"]) {
-  const v=await send();await db.prepare(`UPDATE invitations SET ${mutation} WHERE id=?`).bind(v.id).run();const count:number=messages.length;await post('/api/invitations/begin',{token:v.token});assert.equal(messages.length,count);
- }
- const attemptsInvite=await send(), limited=await begin(attemptsInvite.token);
- for(let n=0;n<5;n++)assert.equal((await post('/api/invitations/accept',{code:'f'.repeat(16)},limited.cookie)).status,400);
- assert.equal((await post('/api/invitations/accept',{code:limited.code},limited.cookie)).status,400);
- const authorityInvite=await send(), authorityChallenge=await begin(authorityInvite.token);
- await db.prepare("UPDATE principals SET revoked_at='2026-01-01' WHERE tenant_id='t' AND id='p'").run();
- assert.equal((await post('/api/invitations/accept',{code:authorityChallenge.code},authorityChallenge.cookie)).status,400);
- await db.prepare("UPDATE principals SET revoked_at=NULL WHERE tenant_id='t' AND id='p'").run();
- const expired=await send(), expiredChallenge=await begin(expired.token);
- await db.prepare("UPDATE invitation_challenges SET expires_at='2020-01-01' WHERE invitation_id=?").bind(expired.id).run();
- assert.equal((await post('/api/invitations/accept',{code:expiredChallenge.code},expiredChallenge.cookie)).status,400);
- const stale=await send(), staleChallenge=await begin(stale.token);
- await db.prepare("DELETE FROM project_metrics WHERE metric_id='approved'").run();
- assert.equal((await post('/api/invitations/accept',{code:staleChallenge.code},staleChallenge.cookie)).status,400);
- await db.prepare("INSERT INTO project_metrics VALUES('t','c','project','approved')").run();
- let calls=0;const uncertain=invitations(db,principal,env,{async send(){calls++;throw Error('Synthetic timeout');}});
- const uncertainPrepared=await prepare();assert.equal((await uncertain.sendInvitation({invitationId:uncertainPrepared.invitationId,approvalDigest:uncertainPrepared.approvalDigest,explicitlyApproved:true})).deliveryState,'uncertain');
- await assert.rejects(uncertain.sendInvitation({invitationId:uncertainPrepared.invitationId,approvalDigest:uncertainPrepared.approvalDigest,explicitlyApproved:true}));assert.equal(calls,1);
- for(let n=0;n<30;n++)await post('/api/invitations/begin',{token:'invalid'},'',{'CF-Connecting-IP':'rate-test'});
- assert.equal((await post('/api/invitations/begin',{token:'invalid'},'',{'CF-Connecting-IP':'rate-test'})).status,429);
+ // Revoke grant A after reading observations while grant B survives. Cached A
+ // data must be filtered out by the final exact metric authorization query.
+ const second=await send(['unapproved']);assert.equal((await post('/api/invitations/accept',{token:second.token})).status,200);
+ let revokedDuringRead=false;
+ const wrappedDb={prepare(sql:string){const statement=db.prepare(sql);if(!sql.startsWith('SELECT o.metric_id'))return statement;return {bind(...values:unknown[]){const bound=statement.bind(...values);return {async all(){const rows=await bound.all();await repo.revokeInvitation({clientId:'c',invitationId:invite.id});revokedDuringRead=true;return rows;}};}};}} as unknown as D1Database;
+ const filtered=await portalReport(wrappedDb,actor,'c','project','2026-10');
+ assert.equal(revokedDuringRead,true);assert.deepEqual(filtered.metrics.map(m=>m.id),['unapproved']);
+ await repo.revokeInvitation({clientId:'c',invitationId:second.id});
+ assert.deepEqual((await portalTargets(db,actor)).targets,[]);
+ // Legacy email-only accepted rows intentionally never migrate by matching email.
+ const legacy=await send();await db.prepare("UPDATE invitations SET accepted_at=?,acceptance_id='legacy' WHERE id=?").bind(new Date().toISOString(),legacy.id).run();
+ assert.deepEqual((await portalTargets(db,actor)).targets,[]);
+ for(const mutation of ["revoked_at='2026-01-01'","invite_expires_at='2020-01-01'","target_revision=999"]){const v=await send();await db.prepare(`UPDATE invitations SET ${mutation} WHERE id=?`).bind(v.id).run();assert.equal((await post('/api/invitations/accept',{token:v.token})).status,400);}
+ const stale=await send();await db.prepare("DELETE FROM project_metrics WHERE metric_id='approved'").run();assert.equal((await post('/api/invitations/accept',{token:stale.token})).status,400);await db.prepare("INSERT INTO project_metrics VALUES('t','c','project','approved')").run();
+ const authority=await send();await db.prepare("UPDATE principals SET revoked_at='2026-01-01' WHERE tenant_id='t' AND id='p'").run();assert.equal((await post('/api/invitations/accept',{token:authority.token})).status,400);await db.prepare("UPDATE principals SET revoked_at=NULL WHERE tenant_id='t' AND id='p'").run();
+ let calls=0;const uncertain=invitations(db,principal,env,{async send(){calls++;throw Error('Synthetic timeout');}});const pending=await prepare();
+ assert.equal((await uncertain.sendInvitation({invitationId:pending.invitationId,approvalDigest:pending.approvalDigest,explicitlyApproved:true})).deliveryState,'uncertain');
+ await assert.rejects(()=>uncertain.sendInvitation({invitationId:pending.invitationId,approvalDigest:pending.approvalDigest,explicitlyApproved:true}));assert.equal(calls,1);
+ for(const path of ['/api/login/begin','/api/login/verify','/api/logout'])assert.equal((await post(path,{email:actor.email,code:'000000'})).status,404);
+ for(let n=0;n<30;n++)await post('/api/invitations/begin',{token:'a'.repeat(43)},actor,{'CF-Connecting-IP':'rate-test'});
+ assert.equal((await post('/api/invitations/begin',{token:'a'.repeat(43)},actor,{'CF-Connecting-IP':'rate-test'})).status,429);
+ assert.equal(messages.length,(await db.prepare("SELECT count(*) n FROM invitations WHERE delivery_state='accepted'").first<{n:number}>())!.n);
 });

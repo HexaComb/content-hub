@@ -17,9 +17,13 @@
     "build:web": "astro build --root ./web",
     "dev:web": "astro dev --root ./web",
     "typecheck:web": "tsc --noEmit -p web/tsconfig.json",
-    "test:web": "node --test web/tests/format.test.ts"
+    "test:web": "node --test web/tests/*.test.ts"
   },
   "dependencies": {
+    "@clerk/backend": "^3.27.0",
+    "@clerk/clerk-js": "^6.42.3",
+    "@clerk/shared": "^4.44.1",
+    "@clerk/ui": "^1.42.4",
     "@modelcontextprotocol/server": "2.4.0",
     "agents": "0.33.0",
     "astro": "^7.4.10",

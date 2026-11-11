@@ -110,8 +110,9 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
     assert.equal((await mf.dispatchFetch("https://example.test/api/admin/signup", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:"christian@unreelviews.com",role:"super_admin"})})).status, 405);
     assert.equal((await mf.dispatchFetch("https://example.test/api/targets/client/guessed/report?month=2026-10")).status, 401);
     const login = await mf.dispatchFetch("https://example.test/api/login/begin", { method: "POST", headers: { Origin: "https://example.test", "Content-Type": "application/json" }, body: JSON.stringify({email:"synthetic@example.invalid"}) });
-    assert.equal(login.status, 503);
-    assert.equal((await login.json() as {error:string}).error, "Authentication unavailable.");
+    assert.equal(login.status, 404);
+    assert.equal((await login.json() as {error:string}).error, "Not found.");
+    assert.equal((await mf.dispatchFetch("https://example.test/api/auth/config")).status, 503);
   });
   await t.test("invitation MCP preparation is scoped and cannot deliver without configuration", async () => {
     decode(await call("create_project", { clientId: "client", projectId: "report-target", kind: "one_off_project", name: "Synthetic target", description: "Test only", status: "active", metricIds: [metric.id], expectedRevision: 0, idempotencyKey: "report-target-create" }));

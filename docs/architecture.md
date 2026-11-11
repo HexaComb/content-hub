@@ -6,7 +6,7 @@ Give a marketing agency one dependable place to answer: “What changed for this
 
 ## Small initial stack
 
-1. **Astro reporting application:** private target selector, monthly overview, two-period comparisons and synthetic demo. Metric history and content calendar remain future UI work.
+1. **Astro reporting application:** private target selector, monthly overview, two-period comparisons. Metric history and content calendar remain future UI work.
 2. **Cloudflare Worker:** application endpoints and stateless MCP. Serves the MCP, private reporting/auth APIs and static Astro assets.
 3. **D1:** tenants, clients, agent permissions, metric definitions, observation revisions and content metadata.
 4. **R2, only when needed:** uploaded media and frozen report exports. The initial design stores asset references and does not provision storage or download files.
@@ -47,7 +47,7 @@ Worker MCP, D1 schema, client/project create/update, generic metric definitions,
 
 ### Private reporting app implemented
 
-Astro UI, passwordless email verification and separate human sessions, read-only target-scoped monthly reports, and safe invitation acceptance. Live Resend configuration remains disabled. Metric detail/history, content calendar, operator UI and fully paginated discovery remain future work.
+Astro UI, Clerk-verified identity and separate human sessions, read-only target-scoped monthly reports, and safe invitation acceptance. Live Resend configuration remains disabled. Metric detail/history, content calendar, operator UI and fully paginated discovery remain future work.
 
 ### Invitations implemented; publishing coordination remains
 
