@@ -9,7 +9,7 @@ const { area, heading, description } = Astro.props;
 const isAdmin = area === 'admin';
 ---
 <div class:list={['admin-app', 'workspace-app', { 'client-app': !isAdmin }]} data-workspace={area}>
-  <dialog id="workspace-navigation" class="workspace-navigation" aria-label="Portal navigation" role="complementary" open>
+  <dialog id="workspace-navigation" class="workspace-navigation" data-mobile-open="false" aria-label="Portal navigation" role="complementary" open>
     <div class="navigation-brand"><Brand href={isAdmin ? '/admin' : '/'} subtitle={isAdmin ? 'Administrator' : 'Client portal'} /><button id="close-navigation" class="icon-button" aria-label="Close navigation"><Icon name="close" /></button></div>
     <p class="navigation-label">Projects</p>
     <nav class="workspace-links" aria-label="Main navigation">

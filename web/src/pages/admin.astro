@@ -14,7 +14,7 @@ import Workspace from '../components/Workspace.astro';
         <section class="admin-directory" aria-labelledby="directory-title">
           <div class="admin-directory-heading"><div><h2 id="directory-title">Project directory</h2><p id="summary"></p></div><button id="refresh" class="admin-button"><AdminIcon name="refresh" />Refresh</button></div>
           <div id="empty" class="admin-notice" hidden></div>
-          <div class="admin-table-scroll" tabindex="0" role="region" aria-label="All clients and projects, horizontally scrollable"><table class="admin-table"><thead><tr><th scope="col">Project / account</th><th scope="col">Client</th><th scope="col">Status</th><th scope="col"><span class="admin-sr-only">Report</span></th></tr></thead><tbody id="project-rows"></tbody></table></div>
+          <div class="admin-table-scroll" tabindex="0" role="region" aria-label="All clients and projects, horizontally scrollable"><table class="admin-table"><thead><tr><th scope="col">Project</th><th scope="col">Client</th><th scope="col">Status</th><th scope="col"><span class="admin-sr-only">Report</span></th></tr></thead><tbody id="project-rows"></tbody></table></div>
           <div class="admin-directory-footer"><span>Includes active, paused, completed and archived projects.</span><button id="load-more" class="admin-button admin-button-quiet" hidden>Load more projects</button></div>
         </section>
 

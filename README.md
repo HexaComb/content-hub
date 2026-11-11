@@ -4,6 +4,8 @@ A private client reporting app. Clients own projects, projects select the metric
 
 ## Current implementation
 
+- Optional project-level SEO and Instagram plugins, separate dashboards and accessible settings/member dialogs. Plugin configuration is available through the UI and MCP; external account connections are not implied.
+
 - Cloudflare Worker with a stateless remote MCP endpoint at `/mcp`.
 - Cloudflare D1 schema with tenant and client boundaries.
 - Static Astro client portal, deep-linked themed client project pages, month selection and private metric comparisons.
@@ -91,6 +93,8 @@ A new installation starts with an empty database. `/` is the private portal sign
 An agent can obtain numbers from OpenSEO or another source, then call `record_observation`. **unreel content does not connect to OpenSEO.** Likewise, any authorized agent can retrieve scheduled content. A consumer such as Muse would be external; no specific bot is required or integrated.
 
 ## Design documents
+
+- [Project plugins and dashboard configuration](docs/plugins.md)
 
 - [Client project pages and browser invitation administration](docs/client-project-pages.md)
 

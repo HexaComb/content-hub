@@ -53,8 +53,8 @@
   #close-navigation,.mobile-brand { display: inline-flex; }
   .mobile-brand { width: 40px; height: 40px; overflow: hidden; border-radius: 8px; }
   .mobile-brand img { width: 40px; height: 40px; transform: scale(1.65); }
-  .workspace-navigation[open]:not(:modal) { display: none; }
-  .workspace-app .workspace-navigation:modal { width: min(320px, 90vw); padding: 20px 16px; border-right: 1px solid var(--admin-border); }
+  .workspace-navigation[open]:not([data-mobile-open="true"]) { display: none; }
+  .workspace-app .workspace-navigation[open][data-mobile-open="true"] { width: min(320px, 90vw); padding: 20px 16px; border-right: 1px solid var(--admin-border); }
   .workspace-navigation::backdrop { background: rgb(0 0 0 / .65); }
   html.navigation-open { overflow: hidden; }
   .workspace-app[data-sidebar-collapsed="true"] :is(.app-brand-copy,.navigation-label,.navigation-note,.navigation-footer,.workspace-link span) { display: revert; }

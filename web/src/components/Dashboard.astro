@@ -1,12 +1,16 @@
 ---
 import Workspace from './Workspace.astro';
+import '../styles/plugins.css';
+import '../styles/modal.css';
 const {project=false}=Astro.props;
 ---
 <Workspace area="client" heading={project?"Client project":"Performance overview"} description="Your results, with the context to understand them.">
 <div id="status" class="admin-notice" role="status" aria-live="polite">Opening your projects…</div>
-<section id="welcome" class="admin-welcome" hidden><h2>Welcome to your client portal</h2><p>See the Instagram accounts and one-off projects shared with you, with clear month-over-month comparisons.</p><p>Open your private invitation email to get started, or sign in below if you already have access.</p><div id="clerk-sign-in" class="clerk-container"></div><p class="small">Use the email address on your invitation. Your administrator manages which accounts and projects you can access.</p></section>
+<section id="welcome" class="admin-welcome" hidden><h2>Welcome to your client portal</h2><p>See the projects shared with you, with clear month-over-month comparisons.</p><p>Open your private invitation email to get started, or sign in below if you already have access.</p><div id="clerk-sign-in" class="clerk-container"></div><p class="small">Use the email address on your invitation. Your administrator manages which projects you can access.</p></section>
 <section id="project-admin" class="project-admin" hidden><a href="/admin">← All projects</a><span class="quiet-pill">Administrator preview · Full project report</span><button id="manage-invitations" class="admin-button">Invite client / Manage access</button><p>Client recipients see only their approved metrics. This preview shows the complete project.</p></section>
 <div id="invitations" hidden></div>
+<section id="project-plugins" class="project-plugins" aria-label="Project plugins" hidden></section>
+<section id="instagram-content" class="plugin-content" aria-label="Instagram content" hidden></section>
 <div id="dashboard" hidden><p id="project-breadcrumb" class="project-breadcrumb" hidden></p><section class="toolbar" aria-label="Report selection"><div class="target-control"><label for="target">CLIENT / PROJECT</label><select id="target"></select></div><div class="month-control"><label for="month">REPORTING MONTH</label><div class="month-input"><button id="previous-month" aria-label="Previous month">←</button><input type="month" id="month" min="1000-01" max="9999-12"/><button id="next-month" aria-label="Next month">→</button></div></div></section>
 <section class="target-heading"><img id="theme-logo" hidden alt=""/><div class="target-avatar" aria-hidden="true" id="target-avatar">◎</div><div><p id="theme-eyebrow" hidden></p><h2 id="target-name"></h2><p id="target-detail"></p><p id="theme-tagline" hidden></p></div><span id="target-status" class="quiet-pill"></span></section>
 <div class="theme-divider" aria-hidden="true"></div><div class="section-heading"><h2>At a glance</h2><p id="comparison-label"></p></div><section id="metrics" class="metrics" aria-label="Key performance indicators"></section>

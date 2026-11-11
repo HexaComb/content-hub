@@ -1,3 +1,4 @@
+import { readProjectPlugins, selectPlugin } from './plugins.ts';
 import { readProjectTheme } from './themes.ts';
 import { PublicError } from "./auth.ts";
 import { compareReadings, monthRange, previousMonth, type Direction, type Quality } from "./domain.ts";
@@ -32,7 +33,7 @@ export async function portalTargets(db: D1Database, identity: HumanIdentity) {
   return { targets: rows.filter(row => counts.get(JSON.stringify([row.client_id, row.project_id])) === 1).map(targetDTO) };
 }
 
-export async function portalReport(db: D1Database, identity: HumanIdentity, clientId: string, projectId: string, month: string) {
+export async function portalReport(db: D1Database, identity: HumanIdentity, clientId: string, projectId: string, month: string, pluginKey?:string) {
   let range: ReturnType<typeof monthRange>, priorRange: ReturnType<typeof monthRange>, priorMonth: string;
   try { range = monthRange(month); priorMonth = previousMonth(month); priorRange = monthRange(priorMonth); }
   catch { throw new PublicError("Use a valid reporting month in YYYY-MM format."); }
@@ -61,6 +62,7 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
         WHERE ${activeGrant} AND i.tenant_id=o.tenant_id AND i.client_id=o.client_id AND i.project_id=pm.project_id)`)
     .bind(target.tenant_id, clientId, projectId, range.start, range.end, priorRange.start, priorRange.end, ...accessBindings(identity))
     .all<{ metric_id: string; period_start: string; value: number | null; quality: Quality; collected_at: string }>()).results;
+  const plugin=pluginKey===undefined?null:selectPlugin(await readProjectPlugins(db,target.tenant_id,clientId,projectId),pluginKey);
   const appearance = await readProjectTheme(db,target.tenant_id,clientId,projectId);
   // Re-query the exact surviving metric permissions immediately before building
   // the response. An unrelated surviving grant must not keep revoked metrics.
@@ -74,11 +76,23 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
   // zero rows means no access. Do not await another query after this snapshot.
   if (!finalAllowed.length) throw new PublicError("Reporting target is not available.");
   const allowedIds = new Set(finalAllowed.flatMap(row => row.metric_id === null ? [] : [row.metric_id]));
-  return { target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)).map(metric => {
+  return { target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)&&(!plugin||plugin.metricIds.includes(metric.id))).map(metric => {
     const reading = (period: string) => {
       const row = readings.find(r => r.metric_id === metric.id && r.period_start === period);
       return row ? { value: row.value, quality: row.quality, collectedAt: row.collected_at } : null;
     };
     return { ...metric, ...compareReadings(reading(range.start), reading(priorRange.start), metric.direction, metric.unit) };
   }) };
+}
+
+/** Return plugin metadata only after resolving one exact authorized tenant. */
+export async function portalPlugins(db:D1Database,identity:HumanIdentity,clientId:string,projectId:string){
+ const targets=(await db.prepare(`SELECT DISTINCT ${targetColumns} ${targetJoin} WHERE ${activeGrant} AND p.client_id=? AND p.id=? LIMIT 2`).bind(...accessBindings(identity),clientId,projectId).all<TargetRow>()).results;
+ if(targets.length!==1)throw new PublicError('Reporting target is not available.');
+ const tenant=targets[0].tenant_id;
+ const plugins=await readProjectPlugins(db,tenant,clientId,projectId);
+ const allowed=(await db.prepare(`SELECT DISTINCT pm.metric_id ${targetJoin} LEFT JOIN json_each(i.metric_ids_json) approved ON 1=1 LEFT JOIN project_metrics pm ON pm.tenant_id=i.tenant_id AND pm.client_id=i.client_id AND pm.project_id=i.project_id AND pm.metric_id=approved.value WHERE ${activeGrant} AND i.tenant_id=? AND i.client_id=? AND i.project_id=?`).bind(...accessBindings(identity),tenant,clientId,projectId).all<{metric_id:string|null}>()).results;
+ if(!allowed.length)throw new PublicError('Reporting target is not available.');
+ const ids=new Set(allowed.map(r=>r.metric_id));
+ return {plugins:plugins.filter(p=>p.enabled).map(p=>({...p,metricIds:p.metricIds.filter(id=>ids.has(id))}))};
 }

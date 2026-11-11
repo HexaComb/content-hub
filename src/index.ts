@@ -1,3 +1,4 @@
+import { getProjectPlugins, setProjectPlugin, pluginTargetInput, setPluginInput, isAdminPluginPath, handleAdminPluginRequest } from './plugins.ts';
 import { handleAdminInvitationRequest, isAdminInvitationPath } from './adminInvitations.ts';
 import { getProjectTheme, validateProjectTheme, updateProjectTheme, resetProjectTheme } from './themes.ts';
 import { themeTargetInput, validateThemeInput, updateThemeInput, resetThemeInput } from './themeSchema.ts';
@@ -16,7 +17,7 @@ import { createClient, updateClient, createProject, updateProject, listProjects 
 import { createClientInput, updateClientInput, createProjectInput, updateProjectInput, listProjectsInput } from "./workspaceSchemas.ts";
 import { invitations, handleInvitationRequest } from "./invitations.ts";
 import { prepareInvitationInput, sendInvitationInput, listInvitationsInput, revokeInvitationInput } from "./invitationSchemas.ts";
-import { portalTargets, portalReport } from "./portal.ts";
+import { portalTargets, portalReport, portalPlugins } from "./portal.ts";
 import { getHumanIdentity, clerkConfiguration } from "./humanAuth.ts";
 import type { InvitationEnv } from "./mail.ts";
 import { getAdminSession } from "./admin.ts";
@@ -53,7 +54,9 @@ function createServer(db: D1Database, principal: Principal, env: Env) {
     registerTool("update_client", { description: "Update an authorized client's name/timezone with a revision check and audit receipt.", inputSchema: updateClientInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => updateClient(db, principal, v)));
   }
   if (toolScopes.includes("projects:read")) registerTool("list_projects", { description: "List authorized client projects and linked metrics.", inputSchema: listProjectsInput, annotations: readOnly }, v => respond(() => listProjects(db, principal, v)));
+  if (toolScopes.includes("projects:read")) registerTool("get_project_plugins", {description:"Read explicit plugin configuration for an authorized project.",inputSchema:pluginTargetInput,annotations:readOnly},v=>respond(()=>getProjectPlugins(db,principal,v)));
   if (toolScopes.includes("projects:write")) {
+    registerTool("set_project_plugin", {description:"Install, configure or disable a project plugin with revision and idempotency checks. Explicit project metrics only; does not grant access or publish content.",inputSchema:setPluginInput,annotations:{...write,idempotentHint:true}},v=>respond(()=>setProjectPlugin(db,principal,v)));
     registerTool("create_project", { description: "Create an authorized client's project with metric associations.", inputSchema: createProjectInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => createProject(db, principal, v)));
     registerTool("update_project", { description: "Replace project metadata and metric associations with a revision check. Does not grant recipient access.", inputSchema: updateProjectInput, annotations: { ...write, idempotentHint: true } }, v => respond(() => updateProject(db, principal, v)));
   }
@@ -119,6 +122,11 @@ export default {
           if(!identity)return secureResponse(Response.json({error:'Sign in to continue.'},{status:401}),true);
           return secureResponse(await handleAdminInvitationRequest(request,env,identity),true);
         }
+        if (isAdminPluginPath(url.pathname)) {
+          const identity=await getHumanIdentity(request,env);
+          if(!identity)return secureResponse(Response.json({error:'Sign in to continue.'},{status:401}),true);
+          return secureResponse(await handleAdminPluginRequest(request,env,identity),true);
+        }
         if (request.method !== "GET") return secureResponse(Response.json({ error: "Method not allowed." }, { status: 405 }), true);
         if (url.pathname === "/api/auth/config") {
           const auth = clerkConfiguration(env);
@@ -134,11 +142,13 @@ export default {
         const adminResponse = await handleAdminReadRequest(request, env, session);
         if (adminResponse) return secureResponse(adminResponse, true);
         if (url.pathname === "/api/targets") return secureResponse(Response.json(await portalTargets(env.DB, session)), true);
+        const pluginMatch=url.pathname.match(/^\/api\/targets\/([^/]+)\/([^/]+)\/plugins$/);
+        if(pluginMatch)return secureResponse(Response.json(await portalPlugins(env.DB,session,id.parse(decodeURIComponent(pluginMatch[1])),id.parse(decodeURIComponent(pluginMatch[2])))),true);
         const match = url.pathname.match(/^\/api\/targets\/([^/]+)\/([^/]+)\/report$/);
         if (match) {
           const clientId = id.parse(decodeURIComponent(match[1]));
           const projectId = id.parse(decodeURIComponent(match[2]));
-          return secureResponse(Response.json(await portalReport(env.DB, session, clientId, projectId, url.searchParams.get("month") ?? new Date().toISOString().slice(0, 7))), true);
+          return secureResponse(Response.json(await portalReport(env.DB, session, clientId, projectId, url.searchParams.get("month") ?? new Date().toISOString().slice(0, 7),url.searchParams.get("plugin") ?? undefined)), true);
         }
         return secureResponse(Response.json({ error: "Not found." }, { status: 404 }), true);
       } catch (error) {

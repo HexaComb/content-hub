@@ -11,7 +11,7 @@ async function loadPage(offset:number,auth:number){const data=await api<AdminOve
  for(const entry of data.entries){
   const row=document.createElement('tr');
   const projectCell=document.createElement('td');const projectName=document.createElement(entry.project?'a':'span');if(entry.project)(projectName as HTMLAnchorElement).href=projectPagePath(entry.project);projectName.className='admin-project-name';projectName.textContent=entry.project?.name??'No projects yet';projectCell.append(projectName);
-  if(entry.project){const kind=document.createElement('span');kind.className='admin-project-kind';kind.textContent=entry.project.kind==='instagram_account'?'Instagram account':'One-off project';projectCell.append(kind);}
+  if(entry.project){const kind=document.createElement('span');kind.className='admin-project-kind';kind.textContent='Project';projectCell.append(kind);}
   row.append(projectCell);
   for(const text of [entry.clientName]){const cell=document.createElement('td');cell.textContent=text;row.append(cell);}
   const statusCell=document.createElement('td');const badge=document.createElement('span');badge.className='admin-status';badge.textContent=entry.project?.status??'No project';badge.dataset.status=entry.project?.status??'empty';statusCell.append(badge);row.append(statusCell);

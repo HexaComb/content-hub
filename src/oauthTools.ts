@@ -6,6 +6,7 @@ const RESOURCE_METADATA='https://content.unreelviews.com/.well-known/oauth-prote
 export const TOOL_SCOPES:Record<string,string>={
  list_clients:'clients:read',create_client:'clients:write',update_client:'clients:write',
  get_project_theme:'themes:read',validate_project_theme:'themes:read',update_project_theme:'themes:write',reset_project_theme:'themes:write',
+ get_project_plugins:'projects:read',set_project_plugin:'projects:write',
  list_projects:'projects:read',create_project:'projects:write',update_project:'projects:write',
  list_metrics:'metrics:read',get_observation:'metrics:read',compare_month:'metrics:read',define_metric:'metrics:write',record_observation:'metrics:write',
  list_content:'content:read',get_content:'content:read',create_content:'content:write',update_content:'content:write',link_content_metric:'content:write',

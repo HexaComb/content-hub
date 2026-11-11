@@ -1,3 +1,4 @@
+import { readProjectPlugins, selectPlugin } from './plugins.ts';
 import { readProjectTheme } from './themes.ts';
 import { PublicError } from './auth.ts';
 import { requireSuperAdmin } from './admin.ts';
@@ -21,7 +22,7 @@ export async function adminOverview(db:D1Database,identity:HumanIdentity|null,en
  const rows=(await db.prepare(`SELECT ${columns} ${joins} ORDER BY c.tenant_id,c.id,p.id LIMIT 101 OFFSET ?`).bind(offset).all<OverviewRow>()).results;
  return {session,counts:counts??{clients:0,projects:0,workspaces:0},entries:rows.slice(0,100).map(row=>({tenantId:row.tenant_id,workspaceName:row.tenant_name,clientId:row.client_id,clientName:row.client_name,timezone:row.timezone,project:row.project_id===null?null:targetDTO(row)})),nextOffset:rows.length>100?offset+100:null};
 }
-export async function adminReport(db:D1Database,identity:HumanIdentity|null,env:InvitationEnv,tenantId:string,clientId:string,projectId:string,month:string) {
+export async function adminReport(db:D1Database,identity:HumanIdentity|null,env:InvitationEnv,tenantId:string,clientId:string,projectId:string,month:string,pluginKey?:string) {
  requireSuperAdmin(identity,env);
  [tenantId,clientId,projectId].forEach(value=>id.parse(value));
  let range:ReturnType<typeof monthRange>,priorRange:ReturnType<typeof monthRange>,priorMonth:string;
@@ -33,8 +34,9 @@ export async function adminReport(db:D1Database,identity:HumanIdentity|null,env:
  // Explicit report columns only: no invitation tokens, credentials, private notes,
  // source payloads, operator mappings or unrelated client observations are loaded.
  const readings=(await db.prepare(`SELECT o.metric_id,o.period_start,o.value,o.quality,o.collected_at FROM observations o JOIN project_metrics pm ON pm.tenant_id=o.tenant_id AND pm.client_id=o.client_id AND pm.metric_id=o.metric_id WHERE o.tenant_id=? AND o.client_id=? AND pm.project_id=? AND ((o.period_start=? AND o.period_end=?) OR (o.period_start=? AND o.period_end=?)) AND o.revision=(SELECT MAX(r.revision) FROM observations r WHERE r.tenant_id=o.tenant_id AND r.client_id=o.client_id AND r.metric_id=o.metric_id AND r.period_start=o.period_start AND r.period_end=o.period_end)`).bind(tenantId,clientId,projectId,range.start,range.end,priorRange.start,priorRange.end).all<{metric_id:string;period_start:string;value:number|null;quality:Quality;collected_at:string}>()).results;
+ const plugin=pluginKey===undefined?null:selectPlugin(await readProjectPlugins(db,tenantId,clientId,projectId),pluginKey);
  const appearance=await readProjectTheme(db,tenantId,clientId,projectId);
- return {target:targetDTO(target),appearance,month,previousMonth:priorMonth,metrics:definitions.map(metric=>{
+ return {target:targetDTO(target),appearance,month,previousMonth:priorMonth,metrics:definitions.filter(metric=>!plugin||plugin.metricIds.includes(metric.id)).map(metric=>{
   const reading=(period:string)=>{const row=readings.find(r=>r.metric_id===metric.id&&r.period_start===period);return row?{value:row.value,quality:row.quality,collectedAt:row.collected_at}:null;};
   return {...metric,...compareReadings(reading(range.start),reading(priorRange.start),metric.direction,metric.unit)};
  })};
@@ -51,6 +53,6 @@ export async function handleAdminReadRequest(request:Request,env:InvitationEnv,i
   return Response.json(await adminOverview(env.DB,identity,env,Number(page)));
  }
  const match=url.pathname.match(/^\/api\/admin\/targets\/([^/]+)\/([^/]+)\/([^/]+)\/report$/);
- if(match)return Response.json(await adminReport(env.DB,identity,env,...match.slice(1).map(v=>decodeURIComponent(v)) as [string,string,string],url.searchParams.get('month')??new Date().toISOString().slice(0,7)));
+ if(match)return Response.json(await adminReport(env.DB,identity,env,...match.slice(1).map(v=>decodeURIComponent(v)) as [string,string,string],url.searchParams.get('month')??new Date().toISOString().slice(0,7),url.searchParams.get('plugin')??undefined));
  return null;
 }

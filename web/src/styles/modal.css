@@ -1,0 +1,44 @@
+.admin-modal {
+  box-sizing: border-box;
+  width: min(720px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--admin-text, #edf1f3);
+  background: var(--admin-surface, #1c2024);
+  border: 1px solid var(--admin-border, #394148);
+  border-radius: 14px;
+  box-shadow: 0 24px 90px #0009;
+  overflow-wrap: anywhere;
+  color-scheme: dark;
+}
+.admin-modal::backdrop { background: #080b10b8; }
+.admin-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--admin-surface, #1c2024);
+  border-bottom: 1px solid var(--admin-border, #394148);
+}
+.admin-modal-header h2 { margin: 0; font-size: 20px; }
+.admin-modal-close { flex-shrink: 0; min-height: 44px; }
+.admin-modal-content { padding: 24px; }
+.admin-modal .invitation-panel { border: 0; padding: 0; margin: 0; background: transparent; }
+.admin-modal :is(input, select, textarea) { box-sizing: border-box; max-width: 100%; }
+.admin-modal :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #9ccfff; outline-offset: 3px; }
+.admin-modal button:disabled { opacity: .5; cursor: not-allowed; }
+body:has(.admin-modal[open]) { overflow: hidden; }
+@media (max-width: 480px) {
+  .admin-modal { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 10px; }
+  .admin-modal-header, .admin-modal-content { padding: 16px; }
+  .admin-modal button { min-height: 44px; white-space: normal; }
+  .admin-modal input:not([type=checkbox]) { font-size: 16px; }
+}

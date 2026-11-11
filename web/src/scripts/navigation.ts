@@ -5,18 +5,21 @@ const closeButton = document.querySelector<HTMLButtonElement>('#close-navigation
 if (root && navigation && toggle && closeButton) {
   const mobile = matchMedia('(max-width: 900px)');
   let collapsed = false;
+  let mobileOpen = false;
   try { collapsed = localStorage.getItem('unreel.sidebar.collapsed') === 'true'; } catch { /* Storage can be unavailable in private contexts. */ }
   const updateToggle = () => {
-    const expanded = mobile.matches ? navigation.matches(':modal') : !collapsed;
+    const expanded = mobile.matches ? mobileOpen && navigation.open : !collapsed;
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.setAttribute('aria-label', mobile.matches ? (expanded ? 'Close navigation' : 'Open navigation') : (expanded ? 'Collapse sidebar' : 'Expand sidebar'));
     toggle.title = toggle.getAttribute('aria-label')!;
     root.dataset.sidebarCollapsed = String(collapsed);
-    document.documentElement.classList.toggle('navigation-open', navigation.matches(':modal'));
+    navigation.dataset.mobileOpen = String(mobile.matches && mobileOpen && navigation.open);
+    document.documentElement.classList.toggle('navigation-open', mobile.matches && mobileOpen && navigation.open);
   };
   const syncLayout = () => {
-    const wasModal = navigation.matches(':modal');
+    const wasModal = mobileOpen;
     const focused = document.activeElement;
+    mobileOpen = false;
     if (mobile.matches) navigation.close();
     else if (wasModal || !navigation.open) {
       if (wasModal) navigation.close();
@@ -28,14 +31,24 @@ if (root && navigation && toggle && closeButton) {
   };
   const dismiss = () => {
     if (!mobile.matches) return;
+    mobileOpen = false;
     navigation.close();
     updateToggle();
     toggle.focus();
   };
   toggle.addEventListener('click', () => {
     if (mobile.matches) {
-      if (navigation.open) dismiss();
-      else { navigation.showModal(); updateToggle(); closeButton.focus(); }
+      if (mobileOpen && navigation.open) dismiss();
+      else {
+        // Desktop and restored pages can leave an open, nonmodal dialog hidden
+        // by mobile CSS. Close that state before promoting it to a modal.
+        if (navigation.open) navigation.close();
+        navigation.setAttribute('role', 'dialog');
+        navigation.showModal();
+        mobileOpen = true;
+        updateToggle();
+        closeButton.focus();
+      }
     } else {
       collapsed = !collapsed;
       try { localStorage.setItem('unreel.sidebar.collapsed', String(collapsed)); } catch { /* The control still works without persistence. */ }
@@ -44,7 +57,7 @@ if (root && navigation && toggle && closeButton) {
   });
   closeButton.addEventListener('click', dismiss);
   navigation.addEventListener('keydown', event => {
-    if (event.key !== 'Tab' || !navigation.matches(':modal')) return;
+    if (event.key !== 'Tab' || !mobileOpen || !navigation.open) return;
     const items = [...navigation.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)')].filter(item => item.getClientRects().length > 0);
     const first = items[0], last = items.at(-1);
     if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus(); }
@@ -59,6 +72,10 @@ if (root && navigation && toggle && closeButton) {
   });
   navigation.querySelectorAll('a').forEach(link => link.addEventListener('click', dismiss));
   mobile.addEventListener('change', syncLayout);
+  // A restored history entry must not keep the page inert or scroll-locked.
+  window.addEventListener('pagehide', () => { if (mobile.matches) { mobileOpen = false; navigation.close(); updateToggle(); } });
+  window.addEventListener('pageshow', event => { if (event.persisted) syncLayout(); });
+  window.addEventListener('popstate', syncLayout);
   syncLayout();
 }
 
