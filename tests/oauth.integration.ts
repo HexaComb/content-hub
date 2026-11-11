@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {rolldown} from 'rolldown';
 import {Miniflare} from 'miniflare';
+import {validProposal} from '../web/src/scripts/oauth-state.ts';
 const origin='https://content.unreelviews.com';
 
 test('OAuth provider discovery, consent, PKCE, audience, replay and revocation',async t=>{
@@ -120,5 +121,24 @@ test('OAuth provider discovery, consent, PKCE, audience, replay and revocation',
  assert.ok(!(await mcp(writer,'tools/list')).result.tools.some((tool:any)=>tool.name==='create_client'));
  assert.ok((await mcp(writer,'tools/call',{name:'create_client',arguments:{...input,clientId:'forbidden',idempotencyKey:'forbidden-create-key'}})).error);
  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM clients').first<{n:number}>())?.n,1);
+ // ChatGPT can send Base scopes plus the same default checkbox scope. Duplicate
+ // requested tokens are one permission, but duplicate selections stay invalid.
+ authorize.searchParams.set('scope','mcp:connect mcp:connect');
+ const duplicateConsent=await start();
+ assert.equal(validProposal(duplicateConsent.proposal),true);
+ assert.deepEqual(duplicateConsent.proposal.scopes.map((scope:{id:string})=>scope.id),['mcp:connect']);
+ assert.equal(duplicateConsent.proposal.refreshEnabled,false);
+ const pendingDuplicate=await db.prepare('SELECT requested_scopes_json FROM oauth_pending_consents WHERE oauth_client_id=? ORDER BY rowid DESC LIMIT 1').bind(client.clientId).first<{requested_scopes_json:string}>();
+ assert.deepEqual(JSON.parse(pendingDuplicate!.requested_scopes_json),['mcp:connect']);
+ assert.equal((await approve(duplicateConsent,{scopes:['mcp:connect','mcp:connect']})).status,403);
+ const duplicateApproval=await approve(duplicateConsent,{scopes:['mcp:connect']});
+ assert.equal(duplicateApproval.status,200);
+ const duplicateCode=new URL((await duplicateApproval.json() as any).redirectTo).searchParams.get('code')!;
+ const duplicateExchange=await exchange({code:duplicateCode});assert.equal(duplicateExchange.status,200);
+ const duplicateToken=await duplicateExchange.json() as any;
+ assert.equal(duplicateToken.scope,'mcp:connect');assert.equal(duplicateToken.refresh_token,undefined);
+ const duplicatePrincipal=await send('/mcp?testPrincipal',{headers:{Authorization:'Bearer '+duplicateToken.access_token}});
+ assert.equal(duplicatePrincipal.status,200);assert.deepEqual((await duplicatePrincipal.json() as any).principal.scopes,['mcp:connect']);
+
 
 });

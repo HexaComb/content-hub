@@ -68,7 +68,11 @@ export async function handleOAuthRoute(request:Request,env:OAuthEnv,ctx:Executio
   const ceiling=scopeArray(operator.scopes_json);
   const clients=await operatorClients(env.DB,operator);
   if(request.method==='GET') {
-   const parsed=await oauth.parseAuthRequest(request);
+   const validated=await oauth.parseAuthRequest(request);
+   // OAuth scope is a set. Some clients repeat a base scope alongside their
+   // default selection; canonicalize only after provider validation, before
+   // building the consent transaction, policy snapshot and UI proposal.
+   const parsed={...validated,scope:[...new Set(validated.scope)]};
    if(parsed.resource!==OAUTH_RESOURCE || !parsed.codeChallenge || parsed.codeChallengeMethod!=='S256')throw new PublicError('This connection requires S256 PKCE and the canonical MCP resource.');
    if(!parsed.scope.includes('mcp:connect') || parsed.scope.some(s=>!ceiling.includes(s)||!OAUTH_SCOPES.includes(s)))throw new PublicError('Requested permissions exceed the approved workspace mapping.');
    const details=await oauth.describeConsent(parsed);
