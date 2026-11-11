@@ -1,15 +1,43 @@
 ---
 import Shell from '../layouts/Shell.astro';
+import AdminIcon from '../components/AdminIcon.astro';
+import '../styles/admin.css';
 ---
 <Shell title="Administrator overview">
-<div id="portal"><aside class="sidebar"><a class="brand" href="/admin"><span class="brand-mark">u<span>c</span></span><span>unreel content<span class="brand-sub">THE ADMIN SPACE</span></span></a><div class="nav-section">YOUR WORKSPACE</div><a class="nav-item selected" href="/admin" aria-current="page">◫ All projects</a><a class="nav-item" href="/?view=client">↗ Client view</a><div class="sidebar-bottom"><strong>The complete picture.</strong><p>Every client and project,<br/>in one private overview.</p><span class="readonly">◉ Read-only access</span></div></aside>
-<div class="workspace"><header class="topbar"><span class="breadcrumb">Administration <span>/</span> Overview</span><div class="account"><span id="identity">Checking administrator access</span><button id="logout" class="text-button" hidden>Sign out</button></div></header>
-<main id="main"><section class="page-heading"><div><div class="eyebrow">YOUR AGENCY, IN VIEW</div><h1>All projects<span>.</span></h1><p>A read-only overview of every client and project in unreel content.</p></div><span class="access-pill">Super administrator</span></section>
-<div id="status" class="notice" role="status" aria-live="polite">Checking administrator access…</div>
-<section id="welcome" class="welcome panel" hidden><h2>Administrator sign-in</h2><p>Use your existing authorized account. Signing in does not grant administrator access.</p><div id="clerk-sign-in" class="clerk-container"></div></section>
-<div id="admin-workspace" hidden><section class="panel"><h2>Workspace overview</h2><p id="summary"></p><p class="muted">Includes active, paused, completed and archived projects. Setup and changes happen through authorized MCP tools.</p></section>
-<section class="panel data-panel"><div class="section-heading"><h2>Clients & projects</h2><button id="refresh" class="text-button">Refresh</button></div><div id="empty" class="notice" hidden></div><div class="table-scroll" tabindex="0" role="region" aria-label="All clients and projects"><table><thead><tr><th scope="col">Workspace</th><th scope="col">Client</th><th scope="col">Project / account</th><th scope="col">Status</th><th scope="col">Report</th></tr></thead><tbody id="project-rows"></tbody></table></div><button id="load-more" class="text-button" hidden>Load more projects</button></section>
-<section id="report" hidden><section class="toolbar"><span class="quiet-pill">Administrator report view</span><div class="month-control"><label for="month">REPORTING MONTH</label><input type="month" id="month" min="1000-01" max="9999-12"/></div></section><section class="target-heading"><img id="theme-logo" hidden alt=""/><div><p id="theme-eyebrow" hidden></p><h2 id="target-name"></h2><p id="target-detail"></p><p id="theme-tagline" hidden></p></div></section><div class="theme-divider" aria-hidden="true"></div><p id="report-status" role="status" aria-live="polite"></p><div class="section-heading"><h2>At a glance</h2><p id="comparison-label"></p></div><section id="metrics" class="metrics"></section><section class="panel comparison-panel"><h2>Two months, side by side</h2><div id="comparison-chart" class="comparison-chart"></div></section><section class="panel data-panel"><div class="table-scroll" tabindex="0" role="region" aria-label="Monthly metric readings"><table><thead><tr><th scope="col">Metric</th><th scope="col">Selected month</th><th scope="col">Previous month</th><th scope="col">Change</th><th scope="col">Quality / collection date</th></tr></thead><tbody id="metric-rows"></tbody></table></div></section></section></div>
-<footer><span>unreel content · Administrator workspace</span><span>Business changes stay in MCP.</span></footer></main></div></div>
+<div class="admin-app">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin" aria-label="unreel content home"><span class="admin-monogram" aria-hidden="true">u<span>c</span></span><span>unreel<span class="admin-brand-sub">content workspace</span></span></a>
+    <div class="admin-nav-label">Workspace</div>
+    <nav class="admin-nav" aria-label="Workspace navigation">
+      <a class="admin-nav-link is-current" href="/admin" aria-current="page"><AdminIcon name="grid" />All projects<span class="admin-nav-indicator"></span></a>
+      <a class="admin-nav-link" href="/?view=client"><AdminIcon name="arrow" />Client view</a>
+    </nav>
+    <div class="admin-sidebar-note"><AdminIcon name="lock" /><div><strong>Private workspace</strong><p>Read-only access.<br/>Shared with care.</p></div></div>
+    <div class="admin-sidebar-foot"><span class="admin-avatar" aria-hidden="true">A</span><div>Administrator<span>Workspace access</span></div></div>
+  </aside>
+  <div class="admin-workspace">
+    <header class="admin-topbar"><div class="admin-breadcrumb">Workspace<span>/</span><strong>Overview</strong></div><div class="admin-account"><span id="identity">Checking administrator access</span><button id="logout" class="admin-button admin-button-quiet" hidden>Sign out</button></div></header>
+    <main id="main" class="admin-main">
+      <section class="admin-heading"><div><h1>All projects</h1><p>Your clients, projects and performance. One clear view.</p></div><span class="admin-access"><AdminIcon name="lock" />Read-only workspace</span></section>
+      <div id="status" class="admin-notice" role="status" aria-live="polite">Checking administrator access…</div>
+      <section id="welcome" class="admin-welcome" hidden><h2>Administrator sign-in</h2><p>Use your existing authorized account. Signing in does not grant administrator access.</p><div id="clerk-sign-in" class="clerk-container"></div></section>
+      <div id="admin-workspace" hidden>
+        <section class="admin-overview" aria-label="Workspace overview">
+          <dl class="admin-stats"><div><dt><AdminIcon name="folder" />Projects</dt><dd id="project-total">—</dd><dd class="admin-stat-note">Across all clients</dd></div><div><dt><AdminIcon name="users" />Clients</dt><dd id="client-total">—</dd><dd class="admin-stat-note">In your organization</dd></div><div><dt><AdminIcon name="workspace" />Workspaces</dt><dd id="workspace-total">—</dd><dd class="admin-stat-note">Connected in one place</dd></div></dl>
+        </section>
+        <section class="admin-directory" aria-labelledby="directory-title">
+          <div class="admin-directory-heading"><div><h2 id="directory-title">Project directory</h2><p id="summary"></p></div><button id="refresh" class="admin-button"><AdminIcon name="refresh" />Refresh</button></div>
+          <div id="empty" class="admin-notice" hidden></div>
+          <div class="admin-table-scroll" tabindex="0" role="region" aria-label="All clients and projects, horizontally scrollable"><table class="admin-table"><thead><tr><th scope="col">Project / account</th><th scope="col">Client</th><th scope="col">Workspace</th><th scope="col">Status</th><th scope="col"><span class="admin-sr-only">Report</span></th></tr></thead><tbody id="project-rows"></tbody></table></div>
+          <div class="admin-directory-footer"><span>Includes active, paused, completed and archived projects.</span><button id="load-more" class="admin-button admin-button-quiet" hidden>Load more projects</button></div>
+        </section>
+        <div class="admin-report-area">
+<section id="report" tabindex="-1" hidden><section class="toolbar"><span class="quiet-pill">Administrator report view</span><div class="month-control"><label for="month">REPORTING MONTH</label><input type="month" id="month" min="1000-01" max="9999-12"/></div></section><section class="target-heading"><img id="theme-logo" hidden alt=""/><div><p id="theme-eyebrow" hidden></p><h2 id="target-name"></h2><p id="target-detail"></p><p id="theme-tagline" hidden></p></div></section><div class="theme-divider" aria-hidden="true"></div><p id="report-status" role="status" aria-live="polite"></p><div class="section-heading"><h2>At a glance</h2><p id="comparison-label"></p></div><section id="metrics" class="metrics"></section><section class="panel comparison-panel"><h2>Two months, side by side</h2><div id="comparison-chart" class="comparison-chart"></div></section><section class="panel data-panel"><div class="table-scroll" tabindex="0" role="region" aria-label="Monthly metric readings"><table><thead><tr><th scope="col">Metric</th><th scope="col">Selected month</th><th scope="col">Previous month</th><th scope="col">Change</th><th scope="col">Quality / collection date</th></tr></thead><tbody id="metric-rows"></tbody></table></div></section></section>
+        </div>
+      </div>
+      <footer class="admin-footer"><span>unreel content <span aria-hidden="true">/</span> Administrator workspace</span><span><AdminIcon name="lock" />Business changes stay in MCP.</span></footer>
+    </main>
+  </div>
+</div>
 <script>import '../scripts/admin';</script>
 </Shell>

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T02:47:48.622864+00:00",
+  "title": "Design System: unreel content administrator dashboard",
+  "extensions": {
+    "colorMeta": {
+      "admin-accent": {
+        "role": "primary",
+        "displayName": "Restrained mint"
+      },
+      "admin-bg": {
+        "role": "neutral",
+        "displayName": "Charcoal canvas"
+      },
+      "admin-surface": {
+        "role": "neutral",
+        "displayName": "Charcoal surface"
+      }
+    },
+    "typographyMeta": {
+      "total": {
+        "displayName": "Workspace total",
+        "purpose": "API counts with tabular numerals."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "administrator-state-transition",
+        "value": "background-color 150ms ease-out",
+        "purpose": "Buttons, navigation and directory rows, only under prefers-reduced-motion: no-preference."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-max",
+        "value": "760px"
+      },
+      {
+        "name": "compact-desktop-max",
+        "value": "1100px"
+      },
+      {
+        "name": "wide-desktop-min",
+        "value": "1600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Refresh button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Bordered administrator refresh action.",
+      "html": "<button class=\"ds-button\">Refresh</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:8px 12px;border:1px solid #394148;border-radius:7px;background:#24292e;color:#e0e6ea;font:12px Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;cursor:pointer;}.ds-button:hover{background:#30383e;border-color:#56616b;}.ds-button:focus-visible{outline:2px solid #8de0cd;outline-offset:4px;}.ds-button:disabled{opacity:.65;cursor:wait;}@media(prefers-reduced-motion:no-preference){.ds-button{transition:background-color 150ms ease-out;}}"
+    },
+    {
+      "name": "Quiet button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Sign-out and pagination actions.",
+      "html": "<button class=\"ds-button ds-quiet\">Load more projects</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:8px 12px;border:1px solid #394148;border-radius:7px;background:#24292e;color:#e0e6ea;font:12px Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;cursor:pointer;}.ds-button:hover{background:#30383e;border-color:#56616b;}.ds-button:focus-visible{outline:2px solid #8de0cd;outline-offset:4px;}.ds-button:disabled{opacity:.65;cursor:wait;}@media(prefers-reduced-motion:no-preference){.ds-button{transition:background-color 150ms ease-out;}}.ds-quiet{background:transparent;border-color:transparent;color:#a0a9b2;}"
+    },
+    {
+      "name": "Report action",
+      "kind": "button",
+      "refersTo": "report-action",
+      "description": "Opens and focuses the selected project report.",
+      "html": "<button class=\"ds-report\">View report</button>",
+      "css": ".ds-report{border:0;background:transparent;color:#8de0cd;font:12px Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;padding:10px 0 10px 8px;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:4px;cursor:pointer;}.ds-report:hover{text-decoration-color:currentColor;}.ds-report:focus-visible{outline:2px solid #8de0cd;outline-offset:4px;}"
+    },
+    {
+      "name": "Current navigation",
+      "kind": "nav",
+      "refersTo": "navigation-current",
+      "description": "Current administrator workspace location.",
+      "html": "<a class=\"ds-nav\" href=\"/admin\" aria-current=\"page\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z\"/></svg>All projects<span class=\"ds-marker\"></span></a>",
+      "css": ".ds-nav{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:#23332f;color:#b4efdf;text-decoration:none;font:13px Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;}.ds-nav:hover{background:#23332f;color:#b4efdf;}.ds-nav:focus-visible{outline:2px solid #8de0cd;outline-offset:4px;}.ds-marker{margin-left:auto;width:5px;height:5px;border-radius:50%;background:#8de0cd;}@media(prefers-reduced-motion:no-preference){.ds-nav{transition:background-color 150ms ease-out;}}"
+    },
+    {
+      "name": "Active status",
+      "kind": "chip",
+      "refersTo": "status-active",
+      "description": "Noninteractive project status with explicit text.",
+      "html": "<span class=\"ds-status\">Active</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:6px;border-radius:5px;padding:3px 7px;background:#213a2f;color:#9ce3c0;font:10px Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;white-space:nowrap;}.ds-status::before{content:\"\";width:4px;height:4px;background:currentColor;border-radius:50%;}"
+    },
+    {
+      "name": "Project directory surface",
+      "kind": "card",
+      "refersTo": "directory",
+      "description": "Bordered directory container; complete table behavior lives in the implementation.",
+      "html": "<section class=\"ds-directory\"><h2 class=\"ds-heading\">Project directory</h2><p class=\"ds-description\">Explore reports for every client and account.</p></section>",
+      "css": ".ds-directory{border:1px solid #2b3035;border-radius:12px;background:#171a1d;padding:24px;color:#edf1f3;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;}.ds-heading{margin:0 0 5px;font-size:16px;font-weight:600;letter-spacing:-.2px;}.ds-description{margin:0;color:#a0a9b2;font-size:12px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Sleek, modern dark dashboard",
+    "overview": "The administrator dashboard is a sleek, modern dark shell for unreel content’s private, read-only agency metrics workspace. Charcoal surfaces, restrained mint accents, clear totals and a project-first directory implement the user’s chosen direction. This is a code-led record of the delivered dashboard, not a broader brand identity.\n\nScope is administrator chrome on /admin only. Individual client/project themes and report visual styles are out of scope and inherited unchanged. Unthemed reports retain the default light palette; custom project themes are authoritative through project-theme.css and data-project-theme. The admin wrapper isolates report content and provides surrounding spacing. Product context comes from README.md; no PRODUCT.md or additional interview decisions are assumed.",
+    "keyCharacteristics": [
+      "Charcoal surfaces with restrained mint navigation and report actions.",
+      "Clear totals, aligned project rows and compact supporting text.",
+      "Responsive navigation and keyboard-accessible table scrolling."
+    ],
+    "rules": [],
+    "dos": [
+      "Do keep administrator colors scoped to the administrator shell.",
+      "Do preserve visible focus, status text and accessible table labels.",
+      "Do use the existing SVG stroke icons and tabular numerals for totals."
+    ],
+    "donts": [
+      "Don’t apply this palette or typography scale to individual client/project themes or report content.",
+      "Don’t imply that dashboard controls can edit business data; this workspace is read-only."
+    ]
+  }
+}
