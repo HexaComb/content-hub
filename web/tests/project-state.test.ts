@@ -16,7 +16,8 @@ test('only a verified administrator may select the admin report endpoint',()=>{
 });
 test('project sign-in return preserves only known same-origin project coordinates',()=>{
  assert.equal(safeSignInReturn('/project/?tenant=t&client=c&project=p','https://portal.test'),'https://portal.test/project?tenant=t&client=c&project=p');
- for(const path of ['/project?client=c&project=p&redirect=https://evil.test','//evil.test/project?client=c&project=p','/project?client=c','/project?client=c&client=d&project=p'])assert.throws(()=>safeSignInReturn(path,'https://portal.test'));
+ assert.equal(safeSignInReturn('/project/?client=c&project=p&plugin=seo','https://portal.test'),'https://portal.test/project?client=c&project=p&plugin=seo');
+ for(const path of ['/project?client=c&project=p&plugin=bad','/project?client=c&project=p&plugin=seo&plugin=instagram','/project?client=c&project=p&redirect=https://evil.test','//evil.test/project?client=c&project=p','/project?client=c','/project?client=c&client=d&project=p'])assert.throws(()=>safeSignInReturn(path,'https://portal.test'));
 });
 test('invitation sending requires prepared server digest, readiness, explicit approval and idle state',()=>{
  const preview={invitationId:'id',approvalDigest:'digest'} as InvitationPreview;

@@ -17,7 +17,7 @@ export function safeSignInReturn(returnPath:string,origin:string):string {
  if(url.pathname==='/project/')url.pathname='/project';
  if(url.pathname==='/authorize/')url.pathname='/authorize';
  if(url.origin!==origin||url.hash||!['/','/invite','/authorize','/admin','/project'].includes(url.pathname)||returnPath.startsWith('//'))throw new Error('Invalid sign-in return');
- if(url.pathname==='/project'&&([...url.searchParams.keys()].some(key=>!['tenant','client','project'].includes(key))||!url.searchParams.get('client')||!url.searchParams.get('project')||['tenant','client','project'].some(key=>url.searchParams.getAll(key).length>1)))throw new Error('Unexpected project parameters');
+ if(url.pathname==='/project'&&([...url.searchParams.keys()].some(key=>!['tenant','client','project','plugin'].includes(key))||!url.searchParams.get('client')||!url.searchParams.get('project')||['tenant','client','project','plugin'].some(key=>url.searchParams.getAll(key).length>1)||url.searchParams.has('plugin')&&!['seo','instagram'].includes(url.searchParams.get('plugin')!)))throw new Error('Unexpected project parameters');
  if(url.pathname!=='/authorize'&&url.pathname!=='/project'&&url.search)throw new Error('Unexpected sign-in parameters');
  return url.href;
 }

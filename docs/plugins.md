@@ -35,3 +35,5 @@ The user-facing model is **client → project → plugins**. The legacy `one_off
 
 
 Mobile navigation closes on history/page restoration and retains the separate desktop collapsed preference. Its visible state does not rely on support for the CSS :modal selector.
+
+The production CSP permits same-origin script files. Astro's small-script inlining is disabled so navigation is not silently blocked by CSP. `tests/navigationAssets.integration.ts` checks the actual built HTML, served navigation asset and Worker security header, complementing synthetic UI tests.

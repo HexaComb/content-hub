@@ -19,6 +19,6 @@ export function pluginApiPath(target:ProjectRoute,admin:boolean):string {
 }
 export function suggestedMetricIds(key:PluginKey,metrics:{id:string;key:string}[]):string[] {
  // Suggestions are reviewed in the form. They never alter stored associations by themselves.
- const prefix=key==='seo'?/^(openseo|seo|search_console|gsc)[_.:-]/i:/^(instagram|ig)[_.:-]/i;
+ const prefix=key==='seo'?/^(openseo|seo|search_console|gsc|ga4[_.:-]organic)[_.:-]/i:/^(instagram|ig)[_.:-]/i;
  return metrics.filter(metric=>prefix.test(metric.key)).map(metric=>metric.id);
 }
