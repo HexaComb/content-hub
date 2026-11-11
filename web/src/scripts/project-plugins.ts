@@ -7,6 +7,28 @@ import type {Metric,Target} from './types';
 import {buildMonthlyMetricsPrompt,currentReportingPeriod} from './plugin-prompt';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,cls?:string)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
 function button(text:string,action:()=>void){const node=el('button',text,'admin-button');node.type='button';node.onclick=action;return node;}
+/** Bound clipboard feedback: a permission prompt can leave writeText pending indefinitely. */
+export function bindPromptCopy(area:HTMLTextAreaElement,copy:HTMLButtonElement,notice:HTMLElement,isCurrent:()=>boolean,write:(value:string)=>Promise<void>=value=>navigator.clipboard.writeText(value),timeoutMs=3000){
+ let disposed=false,busy=false,attempt=0,timer:ReturnType<typeof setTimeout>|undefined;
+ const clearTimer=()=>{if(timer!==undefined){clearTimeout(timer);timer=undefined;}};
+ const valid=(id:number)=>!disposed&&id===attempt&&isCurrent();
+ copy.onclick=()=>{
+  if(disposed||busy||!isCurrent())return;
+  busy=true;copy.disabled=true;notice.textContent='Copying prompt…';const id=++attempt;
+  const finish=(success:boolean)=>{
+   if(id!==attempt)return;
+   clearTimer();busy=false;
+   if(!valid(id))return;
+   // Invalidate the pending clipboard promise after a timeout or settlement.
+   attempt++;copy.disabled=false;
+   if(success)notice.textContent='Prompt copied. Paste it into your authorized agent.';
+   else{area.focus();area.select();notice.textContent='Could not confirm the copy. The prompt is selected; copy it manually (Ctrl+C or Command+C).';}
+  };
+  timer=setTimeout(()=>finish(false),timeoutMs);
+  try{void write(area.value).then(()=>finish(true),()=>finish(false));}catch{finish(false);}
+ };
+ return ()=>{disposed=true;attempt++;busy=false;clearTimer();copy.onclick=null;};
+}
 type StoredContent={id:string;title:string;kind:string|null;status:string;scheduledAt:string|null;publishedAt:string|null};
 export function mountProjectPlugins(target:ProjectRoute,admin:boolean,selected:PluginKey|null,isCurrent:()=>boolean,onChange:()=>void){
  const root=document.getElementById('project-plugins')!,path=pluginApiPath(target,admin);
@@ -42,13 +64,13 @@ export function mountProjectPlugins(target:ProjectRoute,admin:boolean,selected:P
  }
  function openPrompt(key:PluginKey,trigger:HTMLElement){
   const config=configuration(key);if(!current()||!config?.enabled||!projectDetails)return;
-  dialog?.dispose();const modal=createModal({title:`Update ${pluginCatalog[key].name} metrics`,trigger});dialog=modal;
+  dialog?.dispose();let stopCopy:(()=>void)|undefined;const modal=createModal({title:`Update ${pluginCatalog[key].name} metrics`,trigger,onClose:()=>stopCopy?.()});dialog=modal;
   const period=currentReportingPeriod(projectDetails.timezone);
   modal.content.append(el('p',period?`Current month: ${period.month} · ${period.timezone}. This prompt requests partial month-to-date readings, even if you are viewing a different reporting month.`:'The agent must verify the reporting timezone before choosing the current month.','plugin-notice'));
   modal.content.append(el('p','Includes client/project identifiers and metric configuration, but no credentials or metric values. Share it only with an agent you authorize. Copying does not connect an account or update any data.','plugin-notice'));
   const label=el('label','Prompt and secure MCP setup instructions','plugin-prompt-label');const area=el('textarea',undefined,'plugin-prompt');area.readOnly=true;area.rows=14;area.value=buildMonthlyMetricsPrompt(projectDetails,key,config,metrics);label.append(area);
   const notice=el('p','','plugin-notice');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
-  const copy=button('Copy prompt',async()=>{try{await navigator.clipboard.writeText(area.value);if(current()&&modal.dialog.open)notice.textContent='Prompt copied. Paste it into your authorized agent.';}catch{if(current()&&modal.dialog.open){area.focus();area.select();notice.textContent='Clipboard access is unavailable. The prompt is selected; copy it manually.';}}});
+  const copy=button('Copy prompt',()=>{});stopCopy=bindPromptCopy(area,copy,notice,()=>current()&&modal.dialog.open);
   modal.content.append(label,copy,notice);modal.open();
  }
  function catalog(trigger:HTMLElement){
