@@ -71,3 +71,7 @@ node web/tests/browser-qa.mjs
 Client screenshots default to `/tmp/content-hub-client-qa`, administrator screenshots to `/tmp/content-hub-admin-qa` (override either with `QA_OUTPUT`). The client suite checks actual client rendering, logo loading, contrast, collapse/persistence, modal navigation with keyboard and emulated touch, month/target changes, all theme presets, and retry/empty/denied/signed-out states. The administrator suite verifies totals, pagination and reports. The theme suite exercises 30 responsive combinations; the original portal suite tests authentication unavailability and invitation recovery. Synthetic authentication/API adapters exist only inside the browser tests and are never bundled into the application. Live Clerk sign-in and provider redirects still require a configured test account.
 
 See [the UX audit](../docs/ux-audit.md) for findings, fixes and verification limits.
+
+### Reporting layout
+
+Monthly report cards show the selected value and a labeled previous-month baseline before the change. Default reports and Instagram share charcoal surfaces, restrained mint accents, readable supporting labels and full-width KPI cards below 420px. Instagram range controls are grouped; daily source data remains expandable. Default report CSS stays outside saved project themes; Instagram colors inherit project tokens when present.

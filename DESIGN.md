@@ -183,7 +183,7 @@ Workspace.astro owns both role-specific shells. Desktop navigation is fixed at 2
 
 At 900px and below, navigation.ts presents the sidebar as a native modal dialog, bounded to min(320px, 90vw), with no workspace offset. The top bar has a 68px minimum height, versus 76px on desktop. Main content is centered with a 1500px maximum width; desktop padding is 42px 40px 24px. Gutters reduce to 24px at 1100px and 20px at 760px. Wide desktop top padding becomes 52px at 1600px.
 
-Default report metrics use four columns, two at 1200px and one at 380px. The comparison/context area becomes one column at 1200px; selectors and comparison charts stack at 760px. Administrator totals retain three columns. Tables scroll inside labeled, focusable regions; the directory has a 690px minimum width. Long names wrap without widening the page.
+Default report metrics use four columns, two at 1100px and one at 420px. The comparison/context area becomes one column at 1250px; selectors and comparison charts stack at 760px. Report controls sit on a quiet divider above the project identity. KPI cards show the current value, previous-month baseline, absolute change and relative comparison in that order. Administrator totals retain three columns. Tables scroll inside labeled, focusable regions; the directory has a 690px minimum width. Long names wrap without widening the page.
 
 ## Elevation & Depth
 
@@ -198,7 +198,7 @@ Directory and welcome surfaces use 12px corners; navigation and notices use 8px;
 - **Brand:** shared authentic image with role-specific subtitle; mobile uses the image alone. Collapsed navigation retains accessible link names and native title hints.
 - **Navigation:** current links use mint-tinted surfaces. Desktop collapse preserves destination access. Mobile opening moves focus inside the dialog; Tab and Shift-Tab remain contained. Close, Escape and backdrop dismissal restore opener focus. Breakpoint changes restore nonmodal navigation and release background scrolling.
 - **Buttons and fields:** shared shell buttons, navigation controls and default month controls target 44px. Report actions retain text padding. Hover lightens surfaces or reveals the report underline. Disabled controls inherit reduced opacity and a waiting cursor.
-- **Reports:** default dark selectors, metric cards, comparison bars and provenance tables share report.css. Custom designs bypass those defaults. Loading, unavailable data and partial readings retain explicit text.
+- **Reports:** default dark selectors, metric cards, comparison bars and provenance tables share report.css. Totals scale from 30px to 42px, labels and supporting copy use 12–13px, and the source table uses tabular numerals. Comparison and data-quality sections have explicit titles. A narrow methodology column gives context beside the monthly comparison on wide screens. Custom designs bypass those defaults. Loading, unavailable data and partial readings retain explicit text.
 - **Directory:** a single bordered surface contains heading, table and pagination. API totals are independent of pagination. Selecting a report marks the action and focuses its region.
 - **Access pages:** invitation and consent pages use the shared logo and dark palette. Clerk appearance uses supported background, foreground, primary, muted and input variables; live authentication/provider redirects remain unverified.
 
@@ -211,3 +211,9 @@ Directory and welcome surfaces use 12px corners; navigation and notices use 8px;
 - Do reuse the authentic logo and authored SVG navigation icons.
 - Don’t override a saved project design with default report styling.
 - Don’t imply that read-only dashboard controls edit business data.
+
+## Reporting dashboard refinement
+
+Instagram now shares the report workspace’s charcoal and mint palette, 12px panel corners, 24–28px panel insets and 12–13px supporting text. Its four KPI cards and follower history use the same visual hierarchy as the monthly report. Range controls form a segmented group with a written label and selected state; unavailable ranges stay disabled. Daily values remain available in the expandable table. Missing days and quality information remain explicit. On narrow phones each KPI gets a full-width row.
+
+Instagram’s report-local colors inherit saved project tokens when present, with dark workspace fallbacks. Saved project palettes, layouts and metric ordering remain authoritative; the separate authored client presentation canvas is unchanged. Plugin readiness copy remains visible in a quieter left-rule notice.

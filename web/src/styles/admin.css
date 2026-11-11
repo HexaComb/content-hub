@@ -21,8 +21,8 @@
 .admin-account>span { overflow-wrap: anywhere; }
 .admin-main { max-width: 1500px; margin: 0 auto; padding: 42px 40px 24px; }
 .admin-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 32px; }
-.admin-heading h1 { font-size: 32px; font-weight: 600; letter-spacing: -.9px; margin: 0 0 8px; line-height: 1.2; }
-.admin-heading p { color: var(--admin-muted); font-size: 13px; margin: 0; }
+.admin-heading h1 { font-size: 36px; font-weight: 600; letter-spacing: -1.2px; margin: 0 0 8px; line-height: 1.2; }
+.admin-heading p { color: var(--admin-muted); font-size: 14px; line-height: 1.7; margin: 0; }
 .admin-access { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--admin-muted); white-space: nowrap; }
 .admin-access svg { width: 14px; }
 .admin-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin: 0 0 32px; border: 1px solid var(--admin-border); border-radius: 12px; background: var(--admin-surface); }
