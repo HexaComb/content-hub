@@ -1,11 +1,12 @@
+import { metricAllowedForPlugin } from './pluginMetrics.ts';
 import { readProjectPlugins, selectPlugin } from './plugins.ts';
 import { readProjectTheme } from './themes.ts';
 import { PublicError } from "./auth.ts";
 import { compareReadings, monthRange, previousMonth, type Direction, type Quality } from "./domain.ts";
 
 import type { HumanIdentity } from "./humanAuth.ts";
-type TargetRow = { tenant_id: string; client_id: string; client_name:string; project_id: string; name: string; kind: string; platform_account_ref: string | null; status: string };
-const targetDTO = (p: TargetRow) => ({ clientId: p.client_id, clientName:p.client_name, projectId: p.project_id, name: p.name, kind: p.kind, platformAccountRef: p.platform_account_ref, status: p.status });
+type TargetRow = { tenant_id: string; client_id: string; client_name:string; timezone:string; project_id: string; name: string; kind: string; platform_account_ref: string | null; status: string };
+const targetDTO = (p: TargetRow) => ({ clientId: p.client_id, clientName:p.client_name, timezone:p.timezone, projectId: p.project_id, name: p.name, kind: p.kind, platformAccountRef: p.platform_account_ref, status: p.status });
 
 // The caller must resolve and verify the identity on every request. Resource
 // permissions remain server-side and bind the stable issuer/subject pair, never
@@ -13,7 +14,7 @@ const targetDTO = (p: TargetRow) => ({ clientId: p.client_id, clientName:p.clien
 const activeGrant = `i.accepted_at IS NOT NULL AND i.revoked_at IS NULL AND i.grant_expires_at>?
   AND p.status!='archived' AND i.accepted_identity_issuer=? AND i.accepted_identity_subject=?`;
 const targetJoin = `FROM invitations i JOIN projects p ON p.tenant_id=i.tenant_id AND p.client_id=i.client_id AND p.id=i.project_id JOIN clients c ON c.tenant_id=p.tenant_id AND c.id=p.client_id`;
-const targetColumns = `p.tenant_id,p.client_id,c.name AS client_name,p.id AS project_id,p.name,p.kind,p.platform_account_ref,p.status`;
+const targetColumns = `p.tenant_id,p.client_id,c.name AS client_name,c.timezone,p.id AS project_id,p.name,p.kind,p.platform_account_ref,p.status`;
 const accessBindings = (identity: HumanIdentity) => {
   const now = new Date().toISOString();
   return [now, identity.issuer, identity.subject];
@@ -76,7 +77,7 @@ export async function portalReport(db: D1Database, identity: HumanIdentity, clie
   // zero rows means no access. Do not await another query after this snapshot.
   if (!finalAllowed.length) throw new PublicError("Reporting target is not available.");
   const allowedIds = new Set(finalAllowed.flatMap(row => row.metric_id === null ? [] : [row.metric_id]));
-  return { target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)&&(!plugin||plugin.metricIds.includes(metric.id))).map(metric => {
+  return { target: targetDTO(target), appearance, month, previousMonth: priorMonth, metrics: definitions.filter(metric => allowedIds.has(metric.id)&&(!plugin||(plugin.metricIds.includes(metric.id)&&metricAllowedForPlugin(plugin.key,metric)))).map(metric => {
     const reading = (period: string) => {
       const row = readings.find(r => r.metric_id === metric.id && r.period_start === period);
       return row ? { value: row.value, quality: row.quality, collectedAt: row.collected_at } : null;
@@ -91,8 +92,8 @@ export async function portalPlugins(db:D1Database,identity:HumanIdentity,clientI
  if(targets.length!==1)throw new PublicError('Reporting target is not available.');
  const tenant=targets[0].tenant_id;
  const plugins=await readProjectPlugins(db,tenant,clientId,projectId);
- const allowed=(await db.prepare(`SELECT DISTINCT pm.metric_id ${targetJoin} LEFT JOIN json_each(i.metric_ids_json) approved ON 1=1 LEFT JOIN project_metrics pm ON pm.tenant_id=i.tenant_id AND pm.client_id=i.client_id AND pm.project_id=i.project_id AND pm.metric_id=approved.value WHERE ${activeGrant} AND i.tenant_id=? AND i.client_id=? AND i.project_id=?`).bind(...accessBindings(identity),tenant,clientId,projectId).all<{metric_id:string|null}>()).results;
+ const allowed=(await db.prepare(`SELECT DISTINCT pm.metric_id,m.key ${targetJoin} LEFT JOIN json_each(i.metric_ids_json) approved ON 1=1 LEFT JOIN project_metrics pm ON pm.tenant_id=i.tenant_id AND pm.client_id=i.client_id AND pm.project_id=i.project_id AND pm.metric_id=approved.value LEFT JOIN metrics m ON m.tenant_id=pm.tenant_id AND m.client_id=pm.client_id AND m.id=pm.metric_id WHERE ${activeGrant} AND i.tenant_id=? AND i.client_id=? AND i.project_id=?`).bind(...accessBindings(identity),tenant,clientId,projectId).all<{metric_id:string|null;key:string|null}>()).results;
  if(!allowed.length)throw new PublicError('Reporting target is not available.');
- const ids=new Set(allowed.map(r=>r.metric_id));
- return {plugins:plugins.filter(p=>p.enabled).map(p=>({...p,metricIds:p.metricIds.filter(id=>ids.has(id))}))};
+ const metrics=new Map(allowed.filter(r=>r.metric_id!==null&&r.key!==null).map(r=>[r.metric_id!,{key:r.key!}]));
+ return {plugins:plugins.filter(p=>p.enabled).map(p=>({...p,metricIds:p.metricIds.filter(id=>metrics.has(id)&&metricAllowedForPlugin(p.key,metrics.get(id)!))}))};
 }

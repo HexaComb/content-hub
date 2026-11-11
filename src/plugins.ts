@@ -1,3 +1,4 @@
+import { metricAllowedForPlugin } from './pluginMetrics.ts';
 import { z } from 'zod';
 import { id } from './schemas.ts';
 import { authorize, PublicError, type Principal } from './auth.ts';
@@ -31,8 +32,9 @@ async function writePlugin(db:D1Database,tenant:string,actor:string,input:z.infe
  const hash=await sha256(canonicalJson(input));
  async function replay(){const row=await db.prepare('SELECT payload_hash,result_json FROM plugin_events WHERE tenant_id=? AND actor_id=? AND idempotency_key=?').bind(tenant,actor,input.idempotencyKey).first<{payload_hash:string;result_json:string}>();if(!row)return null;if(row.payload_hash!==hash)throw new PublicError('Idempotency key was already used for a different plugin request.');return {...JSON.parse(row.result_json),replayed:true};}
  const old=await replay();if(old)return old;
- const mappings=(await db.prepare('SELECT metric_id FROM project_metrics WHERE tenant_id=? AND client_id=? AND project_id=?').bind(tenant,input.clientId,input.projectId).all<{metric_id:string}>()).results;
+ const mappings=(await db.prepare('SELECT pm.metric_id,m.key FROM project_metrics pm JOIN metrics m ON m.tenant_id=pm.tenant_id AND m.client_id=pm.client_id AND m.id=pm.metric_id WHERE pm.tenant_id=? AND pm.client_id=? AND pm.project_id=?').bind(tenant,input.clientId,input.projectId).all<{metric_id:string;key:string}>()).results;
  if(input.metricIds.some(id=>!mappings.some(m=>m.metric_id===id)))throw new PublicError('Plugin metrics must belong to this project.');
+ if(input.metricIds.some(id=>!metricAllowedForPlugin(input.key,mappings.find(m=>m.metric_id===id)!)))throw new PublicError('These metrics belong to a different plugin. Choose compatible project metrics.');
  const now=new Date().toISOString(),revision=input.expectedRevision+1;
  const result:Plugin={key:input.key,enabled:input.enabled,revision,metricIds:input.metricIds,updatedAt:now};
  const mutation=input.expectedRevision===0?db.prepare('INSERT INTO project_plugins VALUES(?,?,?,?,?,1,?,?,?)').bind(tenant,input.clientId,input.projectId,input.key,Number(input.enabled),JSON.stringify(input.metricIds),now,actor):db.prepare('UPDATE project_plugins SET enabled=?,revision=revision+1,metric_ids_json=?,updated_at=?,updated_by=? WHERE tenant_id=? AND client_id=? AND project_id=? AND key=? AND revision=?').bind(Number(input.enabled),JSON.stringify(input.metricIds),now,actor,tenant,input.clientId,input.projectId,input.key,input.expectedRevision);

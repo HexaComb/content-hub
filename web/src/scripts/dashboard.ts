@@ -1,5 +1,5 @@
 import {mountProjectPlugins} from './project-plugins';
-import {readPluginKey,pluginCatalog} from './plugin-state';
+import {readPluginKey,pluginCatalog,dashboardViewState} from './plugin-state';
 import {readProjectRoute,projectReportPath,previousCompletedMonth} from './project-state';
 import {projectPagePath} from './admin-state';
 import {mountInvitations} from './project-invitations';
@@ -16,21 +16,27 @@ let targets:Target[]=[];let controller:AbortController|undefined;let generation=
 const month=$<HTMLInputElement>('month');const selector=$<HTMLSelectElement>('target');
 month.value=isProject?previousCompletedMonth():new Date().toISOString().slice(0,7);
 function status(text:string,retry?:()=>void){const box=$('status');box.replaceChildren(document.createTextNode(text));box.hidden=!text;if(retry){const button=document.createElement('button');button.textContent='Try again';button.className='text-button';button.onclick=retry;box.append(' ',button);}}
-function clearReport(){projectPlugins?.clearContent();clearProjectTheme($('dashboard'));document.title=isProject?'Client project':'Performance overview';$('project-breadcrumb').hidden=true;for(const id of ['project-breadcrumb','target-name','target-detail','target-status','target-avatar'])$(id).textContent='';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
+function clearReport(){$('dashboard').hidden=true;projectPlugins?.clearContent();clearProjectTheme($('dashboard'));document.title=isProject?'Client project':'Performance overview';$('project-breadcrumb').hidden=true;for(const id of ['project-breadcrumb','target-name','target-detail','target-status','target-avatar'])$(id).textContent='';for(const id of ['metrics','metric-rows','comparison-chart'])$(id).replaceChildren();$('comparison-label').textContent='';}
 async function loadReport(){controller?.abort();controller=new AbortController();const request=++generation;const target=targets[Number(selector.value)];clearReport();if(!target)return;status('Loading this month’s report…');$('dashboard').setAttribute('aria-busy','true');$('target-name').textContent=target.name;$('target-detail').textContent=`Project${target.platformAccountRef?` · ${target.platformAccountRef}`:''}`;$('target-avatar').textContent=target.kind==='instagram_account'?'◎':'↗';$('target-status').textContent=target.status;
  try{
   const allReport=await api<Report>(projectReportPath(target,month.value,verifiedAdmin),{signal:controller.signal});if(request!==generation)return;
   let report=allReport,enabled=true;
   if(projectPlugins){
-   try{await projectPlugins.load(controller.signal);if(request!==generation)return;projectPlugins.render(allReport.metrics,allReport.target.status);if(plugin&&plugin!=='invalid'){enabled=projectPlugins.isEnabled(plugin);if(enabled)report=await api<Report>(projectReportPath(target,month.value,verifiedAdmin)+'&plugin='+plugin,{signal:controller.signal});}}
-   catch(error){if(plugin)throw error;if(request!==generation)return;const box=$('project-plugins');box.hidden=false;box.replaceChildren(document.createTextNode('Plugin settings could not be loaded. Your report is still available. '));const retry=document.createElement('button');retry.className='admin-button';retry.textContent='Retry plugins';retry.onclick=()=>void loadReport();box.append(retry);}
+   try{await projectPlugins.load(controller.signal);if(request!==generation)return;projectPlugins.render(allReport.metrics,allReport.target.status,allReport.target);if(plugin&&plugin!=='invalid'){enabled=projectPlugins.isEnabled(plugin);if(enabled)report=await api<Report>(projectReportPath(target,month.value,verifiedAdmin)+'&plugin='+plugin,{signal:controller.signal});}}
+   catch(error){if(plugin)throw error;if(request!==generation)return;const box=$('project-plugins');box.hidden=false;box.replaceChildren(document.createTextNode('Dashboards could not be loaded. Retry to choose a dashboard. '));const retry=document.createElement('button');retry.className='admin-button';retry.textContent='Retry plugins';retry.onclick=()=>void loadReport();box.append(retry);}
   }
-  if(request!==generation)return;renderReport(report);$('dashboard').querySelectorAll<HTMLElement>(':scope > .theme-divider, :scope > .section-heading, :scope > .metrics, :scope > .detail-grid, :scope > .data-panel').forEach(node=>node.hidden=!enabled);$('month').closest<HTMLElement>('.month-control')!.hidden=!enabled;
-  if(plugin&&enabled&&!report.metrics.length){$('metrics').replaceChildren();const empty=document.createElement('p');empty.className='notice';empty.textContent=verifiedAdmin?'No metrics are configured for this plugin yet. Open Plugin settings to choose existing project metrics.':'No metrics are shared with you in this plugin yet. Ask your project administrator to check the metric settings.';$('metrics').append(empty);}
-  $('target-name').textContent=report.target.name;$('target-detail').textContent=`Project${report.target.platformAccountRef?` · ${report.target.platformAccountRef}`:''}`;$('target-status').textContent=report.target.status;$('project-breadcrumb').hidden=false;$('project-breadcrumb').textContent=`${report.target.clientName??target.clientName??target.clientId} › ${report.target.name}`;
+  if(request!==generation)return;const selectedPlugin=plugin&&plugin!=='invalid'?plugin:null;const view=dashboardViewState(isProject,selectedPlugin,enabled,report.metrics.length);
+  // Never render the unfiltered project report into a plugin or project-home view.
+  if(view.report)renderReport(report);
+  $('dashboard').querySelectorAll<HTMLElement>(':scope > .detail-grid, :scope > .data-panel').forEach(node=>node.hidden=!view.comparisons);
+  $('month').closest<HTMLElement>('.month-control')!.hidden=!view.report;
+  if(selectedPlugin&&view.report&&!report.metrics.length){$('metrics').replaceChildren();const empty=document.createElement('p');empty.className='notice';empty.textContent=verifiedAdmin?`No ${pluginCatalog[selectedPlugin].name} metrics are configured yet. Open Plugin settings to choose compatible project metrics, or add them through MCP.`:'No metrics are shared with you in this plugin yet. Ask your project administrator to check the metric settings.';$('metrics').append(empty);}
+  $('target-name').textContent=selectedPlugin?(report.target.clientName??report.target.name):report.target.name;$('target-detail').textContent=selectedPlugin?`${pluginCatalog[selectedPlugin].name} performance · ${report.target.name}`:`Project${report.target.platformAccountRef?` · ${report.target.platformAccountRef}`:''}`;$('target-status').textContent=report.target.status;$('project-breadcrumb').hidden=false;$('project-breadcrumb').textContent=`${report.target.clientName??target.clientName??target.clientId} › ${report.target.name}`;
   const title=plugin&&plugin!=='invalid'?pluginCatalog[plugin].name+' dashboard':'Client project';document.title=`${report.target.name} · ${title}`;
-  const heading=document.querySelector('.admin-heading h1');if(heading&&isProject)heading.textContent=report.target.name;
-  $('dashboard').hidden=false;status('');void projectPlugins?.loadContent();
+  const heading=document.querySelector('.admin-heading h1');if(heading&&isProject)heading.textContent=selectedPlugin?`${pluginCatalog[selectedPlugin].name} dashboard`:report.target.name;
+  $('project-preview-label').textContent=selectedPlugin?`Administrator preview · ${pluginCatalog[selectedPlugin].name}`:'Administrator preview · Project home';
+  $('project-preview-description').textContent=selectedPlugin?`This dashboard shows only compatible ${pluginCatalog[selectedPlugin].name} metrics. Client recipients see only their approved metrics.`:'Choose a dashboard below. Client recipients see only their approved metrics.';
+  $('dashboard').hidden=!view.report;status('');void projectPlugins?.loadContent();
  }
  catch(e){if(request!==generation||(e instanceof DOMException&&e.name==='AbortError'))return;status(message(e),()=>void loadReport());if(e instanceof ApiError&&[401,403,404].includes(e.status)){$('dashboard').hidden=true;if(e.status===401){$('welcome').hidden=true;status(verificationMessage,()=>void boot());}}}
  finally{if(request===generation)$('dashboard').removeAttribute('aria-busy');}

@@ -1,4 +1,6 @@
 import type {ProjectRoute} from './project-state';
+import {knownMetricPlugin,metricAllowedForPlugin} from '../../../src/pluginMetrics.ts';
+export {metricAllowedForPlugin};
 export type PluginKey='seo'|'instagram';
 export interface ProjectPlugin {key:PluginKey;enabled:boolean;revision:number;metricIds:string[];updatedAt?:string|null}
 export const pluginCatalog={
@@ -19,6 +21,11 @@ export function pluginApiPath(target:ProjectRoute,admin:boolean):string {
 }
 export function suggestedMetricIds(key:PluginKey,metrics:{id:string;key:string}[]):string[] {
  // Suggestions are reviewed in the form. They never alter stored associations by themselves.
- const prefix=key==='seo'?/^(openseo|seo|search_console|gsc|ga4[_.:-]organic)[_.:-]/i:/^(instagram|ig)[_.:-]/i;
- return metrics.filter(metric=>prefix.test(metric.key)).map(metric=>metric.id);
+ return metrics.filter(metric=>knownMetricPlugin(metric.key)===key).map(metric=>metric.id);
+}
+
+/** A project home is a chooser, never an implicit combined report. */
+export function dashboardViewState(projectPage:boolean,selected:PluginKey|null,enabled:boolean,metricCount:number){
+ const report=!projectPage||(selected!==null&&enabled);
+ return {report,comparisons:report&&metricCount>0};
 }

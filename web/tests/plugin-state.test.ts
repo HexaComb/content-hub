@@ -13,3 +13,12 @@ test('metric suggestions use explicit category prefixes, not labels or invented 
  const metrics=[{id:'seo',key:'openseo.visibility'},{id:'ig',key:'instagram_reach'},{id:'organic',key:'ga4_organic_sessions'},{id:'ambiguous',key:'reach'}];
  assert.deepEqual(suggestedMetricIds('seo',metrics),['seo','organic']);assert.deepEqual(suggestedMetricIds('instagram',metrics),['ig']);
 });
+
+test('project home never renders a combined report and empty plugins hide comparison panels',async()=>{
+ const {dashboardViewState}=await import('../src/scripts/plugin-state.ts');
+ for(const enabled of [false,true])for(const count of [0,8])assert.deepEqual(dashboardViewState(true,null,enabled,count),{report:false,comparisons:false});
+ assert.deepEqual(dashboardViewState(true,'instagram',true,0),{report:true,comparisons:false});
+ assert.deepEqual(dashboardViewState(true,'seo',true,8),{report:true,comparisons:true});
+ assert.deepEqual(dashboardViewState(true,'instagram',false,8),{report:false,comparisons:false});
+ assert.deepEqual(dashboardViewState(false,null,true,8),{report:true,comparisons:true});
+});

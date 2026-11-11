@@ -1,3 +1,4 @@
+import { metricAllowedForPlugin } from './pluginMetrics.ts';
 import { readProjectPlugins, selectPlugin } from './plugins.ts';
 import { readProjectTheme } from './themes.ts';
 import { PublicError } from './auth.ts';
@@ -8,7 +9,7 @@ import { compareReadings, monthRange, previousMonth, type Direction, type Qualit
 import { id } from './schemas.ts';
 
 type OverviewRow = { tenant_id:string; tenant_name:string; client_id:string; client_name:string; timezone:string; project_id:string|null; project_name:string|null; kind:string|null; platform_account_ref:string|null; status:string|null };
-const targetDTO = (p:OverviewRow) => ({tenantId:p.tenant_id,clientId:p.client_id,clientName:p.client_name,projectId:p.project_id!,name:p.project_name!,kind:p.kind!,platformAccountRef:p.platform_account_ref,status:p.status!});
+const targetDTO = (p:OverviewRow) => ({tenantId:p.tenant_id,clientId:p.client_id,clientName:p.client_name,timezone:p.timezone,projectId:p.project_id!,name:p.project_name!,kind:p.kind!,platformAccountRef:p.platform_account_ref,status:p.status!});
 const columns = `c.tenant_id,t.name AS tenant_name,c.id AS client_id,c.name AS client_name,c.timezone,p.id AS project_id,p.name AS project_name,p.kind,p.platform_account_ref,p.status`;
 const joins = `FROM clients c JOIN tenants t ON t.id=c.tenant_id LEFT JOIN projects p ON p.tenant_id=c.tenant_id AND p.client_id=c.id`;
 
@@ -36,7 +37,7 @@ export async function adminReport(db:D1Database,identity:HumanIdentity|null,env:
  const readings=(await db.prepare(`SELECT o.metric_id,o.period_start,o.value,o.quality,o.collected_at FROM observations o JOIN project_metrics pm ON pm.tenant_id=o.tenant_id AND pm.client_id=o.client_id AND pm.metric_id=o.metric_id WHERE o.tenant_id=? AND o.client_id=? AND pm.project_id=? AND ((o.period_start=? AND o.period_end=?) OR (o.period_start=? AND o.period_end=?)) AND o.revision=(SELECT MAX(r.revision) FROM observations r WHERE r.tenant_id=o.tenant_id AND r.client_id=o.client_id AND r.metric_id=o.metric_id AND r.period_start=o.period_start AND r.period_end=o.period_end)`).bind(tenantId,clientId,projectId,range.start,range.end,priorRange.start,priorRange.end).all<{metric_id:string;period_start:string;value:number|null;quality:Quality;collected_at:string}>()).results;
  const plugin=pluginKey===undefined?null:selectPlugin(await readProjectPlugins(db,tenantId,clientId,projectId),pluginKey);
  const appearance=await readProjectTheme(db,tenantId,clientId,projectId);
- return {target:targetDTO(target),appearance,month,previousMonth:priorMonth,metrics:definitions.filter(metric=>!plugin||plugin.metricIds.includes(metric.id)).map(metric=>{
+ return {target:targetDTO(target),appearance,month,previousMonth:priorMonth,metrics:definitions.filter(metric=>!plugin||(plugin.metricIds.includes(metric.id)&&metricAllowedForPlugin(plugin.key,metric))).map(metric=>{
   const reading=(period:string)=>{const row=readings.find(r=>r.metric_id===metric.id&&r.period_start===period);return row?{value:row.value,quality:row.quality,collectedAt:row.collected_at}:null;};
   return {...metric,...compareReadings(reading(range.start),reading(priorRange.start),metric.direction,metric.unit)};
  })};

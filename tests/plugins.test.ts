@@ -76,6 +76,36 @@ test('plugin configuration is explicit, scoped, revisioned and never expands rec
  await assert.rejects(db.prepare('DELETE FROM plugin_events').run(),/append-only/);
  assert.equal((await db.prepare("SELECT revision FROM projects WHERE tenant_id='a' AND client_id='c' AND id='p'").first<{revision:number}>())!.revision,1);
  assert.equal((await db.prepare('SELECT COUNT(*) n FROM observations').first<{n:number}>())!.n,4);
+ // Legacy configurations may contain wrong-plugin IDs. Do not rewrite them,
+ // but reject new incompatible writes and never render the old mismatch.
+ for(const [metric,key] of [['search','seo.clicks'],['social','instagram.views']]){
+  await db.prepare("INSERT INTO metrics VALUES('a','c',?,?,?,'test','count','higher','period_total','UTC','{}','Synthetic','agent','2026-11-01')").bind(metric,key,key).run();
+  await db.prepare("INSERT INTO project_metrics VALUES('a','c','p',?)").bind(metric).run();
+  await db.prepare("INSERT INTO observations VALUES('a','c',?,?,'2026-11-01','2026-12-01',1,777,'complete','{}','2026-11-11','2026-11-11','agent',?,'hash',NULL)").bind(metric,metric,metric).run();
+ }
+ const observationsBefore=(await db.prepare('SELECT * FROM observations ORDER BY tenant_id,id').all()).results;
+ await assert.rejects(setProjectPlugin(db,p,{...input,key:'instagram',metricIds:['search'],expectedRevision:1,idempotencyKey:'wrong-social'}),/different plugin/);
+ await assert.rejects(setProjectPlugin(db,p,{...input,metricIds:['social'],expectedRevision:2,idempotencyKey:'wrong-search'}),/different plugin/);
+ // Admin writes use the same compatibility check.
+ await assert.rejects(handleAdminPluginRequest(req({...update,key:'instagram',enabled:true,metricIds:['search'],expectedRevision:1,idempotencyKey:'admin-wrong-social'}),env,admin),/different plugin/);
+ await setProjectPlugin(db,p,{...input,key:'instagram',metricIds:['m','social'],expectedRevision:1,idempotencyKey:'custom-social'});
+ await db.prepare("UPDATE project_plugins SET metric_ids_json='[\"m\",\"social\",\"search\"]',enabled=1 WHERE tenant_id='a' AND client_id='c' AND project_id='p'").run();
+ const configsBefore=(await getProjectPlugins(db,p,target)).plugins;
+ await db.prepare("UPDATE invitations SET metric_ids_json='[\"m\",\"social\",\"search\"]' WHERE id='grant-a'").run();
+ for(const [key,expected] of [['instagram',['social','m']],['seo',['search','m']]] as const){
+  assert.deepEqual((await adminReport(db,admin,env,'a','c','p','2026-11',key)).metrics.map(m=>m.id).sort(),[...expected].sort());
+  assert.deepEqual((await portalReport(db,viewer,'c','p','2026-11',key)).metrics.map(m=>m.id).sort(),[...expected].sort());
+  assert.deepEqual((await portalPlugins(db,viewer,'c','p')).plugins.find(p=>p.key===key)!.metricIds.sort(),[...expected].sort());
+ }
+ assert.deepEqual((await getProjectPlugins(db,p,target)).plugins,configsBefore);
+ await db.prepare("UPDATE invitations SET metric_ids_json='[\"search\"]' WHERE id='grant-a'").run();
+ assert.deepEqual((await portalReport(db,viewer,'c','p','2026-11','instagram')).metrics,[]);
+ assert.deepEqual((await portalPlugins(db,viewer,'c','p')).plugins.find(p=>p.key==='instagram')!.metricIds,[]);
+ // Empty explicit mappings are empty even when the project has compatible data.
+ await setProjectPlugin(db,p,{...input,key:'instagram',metricIds:[],expectedRevision:2,idempotencyKey:'empty-social'});
+ assert.deepEqual((await adminReport(db,admin,env,'a','c','p','2026-11','instagram')).metrics,[]);
+ assert.deepEqual((await db.prepare('SELECT * FROM observations ORDER BY tenant_id,id').all()).results,observationsBefore);
+ await db.prepare("UPDATE project_plugins SET enabled=0 WHERE tenant_id='a' AND key='seo'").run();
  await db.prepare("DELETE FROM project_metrics WHERE tenant_id='a' AND client_id='c' AND project_id='p'").run();
  assert.deepEqual((await portalPlugins(db,viewer,'c','p')).plugins.map(p=>p.key),['instagram']);
  await db.prepare("DELETE FROM client_grants WHERE tenant_id='a'").run();

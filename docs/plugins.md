@@ -14,7 +14,7 @@ MCP `get_project_plugins` and `set_project_plugin` take the same target fields a
 
 ## Reports and recipients
 
-Both existing report routes accept optional `plugin=seo` or `plugin=instagram`. Unknown, absent or disabled plugins fail closed. With a plugin, only its explicit mapping intersected with existing report permissions is returned. Without the parameter reports retain existing behavior.
+Both existing report routes accept optional `plugin=seo` or `plugin=instagram`. Unknown, absent or disabled plugins fail closed. With a plugin, only its explicit mapping intersected with existing report permissions and metric compatibility is returned. Known SEO namespaces (seo, openseo, search_console, google_search_console, gsc and ga4 organic) are excluded from Instagram; instagram/ig namespaces are excluded from SEO. Both browser/MCP writes reject incompatible selections. Unknown custom keys remain explicitly mappable for backwards compatibility. Old incompatible mappings remain in stored configuration/audits but cannot return values in the wrong plugin; their settings modal explains that the next save will remove those selections, never the observations. Without the parameter reports retain existing behavior.
 
 GET `/api/targets/:client/:project/plugins` returns enabled configurations only. The target must resolve to exactly one authorized tenant. Returned metricIds are intersected with current, accepted, unrevoked and unexpired recipient grants and project associations. Plugin installation never expands a recipient's grant. Recipients cannot write configuration or read content metadata.
 
@@ -27,7 +27,7 @@ Only stored Instagram-channel content linked to the project through existing con
 
 ## Browser workflow
 
-The project overview offers an Add plugin modal and individual SEO/Instagram cards. Each installed plugin has a normal, deep-linkable dashboard at `/project?...&plugin=seo` or `plugin=instagram`; Back/Forward and reload preserve the selected dashboard. Plugin settings are a modal with a reviewed selection of the project's existing metrics. Prefix-based checkbox suggestions are never saved automatically. Empty mappings have a clear empty state. Saving neither changes observations nor grants new recipient access. After an unconfirmed save, refresh the current settings before another write.
+The project home is a dashboard chooser with an Add plugin modal and individual SEO/Instagram cards. It does not render an aggregate report below the cards. Each installed plugin has a normal, deep-linkable dashboard at `/project?...&plugin=seo` or `plugin=instagram`; Back/Forward and reload preserve the selected dashboard. Plugin settings are a modal with a reviewed selection of the project's compatible existing metrics. Adding a dashboard from the chooser opens it after a confirmed save. Prefix-based checkbox suggestions are never saved automatically. Empty mappings have a clear empty state. Saving neither changes observations nor grants new recipient access. After an unconfirmed save, refresh the current settings before another write.
 
 Client access/member invitations also open in a labelled native modal. Escape, Close and backdrop dismissal restore focus to the trigger; pending mutations temporarily prevent dismissal. Session changes dispose open dialogs and ignore stale responses. Modal content scrolls on small screens. Delivery still requires the existing explicit review and approval, and uncertain sends are never automatically repeated.
 
@@ -37,3 +37,9 @@ The user-facing model is **client → project → plugins**. The legacy `one_off
 Mobile navigation closes on history/page restoration and retains the separate desktop collapsed preference. Its visible state does not rely on support for the CSS :modal selector.
 
 The production CSP permits same-origin script files. Astro's small-script inlining is disabled so navigation is not silently blocked by CSP. `tests/navigationAssets.integration.ts` checks the actual built HTML, served navigation asset and Worker security header, complementing synthetic UI tests.
+
+## Monthly agent prompt
+
+Each enabled plugin dashboard has a **Copy current-month prompt** action. The review modal contains a copyable prompt and secure remote Streamable HTTP MCP setup instructions for `https://content.unreelviews.com/mcp`. No credential, token, current metric value or source payload is embedded. The visible privacy note explains that client/project identifiers and selected metric configuration are included and should go only to an authorized agent. Clipboard failure selects the text and explains manual copying. No source connection, observation write or OAuth consent occurs merely by opening/copying the prompt.
+
+The prompt calculates the current month in the client's stored IANA timezone, independent of the report month currently displayed; if timezone is unavailable it explicitly requires verification rather than guessing. It requires refreshing configuration, using only selected compatible metrics and already authorized exact source accounts, respecting each metric's own reporting timezone/semantics, labelling current-month observations partial with actual coverage, preserving prior data, and using revision/idempotency safeguards. Empty selections stop; no fabricated data, broad grants, new mappings, publishing or silent source substitutions are authorized.

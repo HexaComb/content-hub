@@ -35,3 +35,8 @@
 .plugin-content td {color:#e3e9ed;}
 .project-plugins :is(a,button,input):focus-visible,.plugin-dialog-form :is(a,button,input):focus-visible {outline:2px solid #8de0cd;outline-offset:3px;}
 @media(max-width:600px){.plugin-grid{grid-template-columns:1fr;}.plugin-card{padding:20px;}.plugin-section-heading,.plugin-title{align-items:flex-start;flex-wrap:wrap;}.plugin-nav a{padding:12px;} }
+
+.plugin-prompt-label {display:grid;gap:10px;font-size:13px;line-height:1.6;}
+.plugin-prompt {width:100%;max-width:100%;min-height:220px;resize:vertical;border:1px solid #414a51;border-radius:8px;background:#101315;color:#edf1f3;padding:14px;font:12px/1.7 ui-monospace,monospace;}
+.plugin-title {flex-wrap:wrap;}
+.plugin-title > div {flex:1 1 240px;}
