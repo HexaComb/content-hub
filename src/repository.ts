@@ -6,8 +6,8 @@ export function repository(db: D1Database, principal: Principal) {
   const tenant = principal.tenantId;
   return {
     async listClients() {
-      return (await db.prepare("SELECT c.id, c.name, c.timezone, v.revision FROM clients c JOIN client_grants g ON c.tenant_id = g.tenant_id AND c.id = g.client_id JOIN client_versions v ON v.tenant_id=c.tenant_id AND v.client_id=c.id WHERE g.tenant_id = ? AND g.principal_id = ? ORDER BY c.id LIMIT 100")
-        .bind(tenant, principal.id).all()).results;
+      return (await db.prepare("SELECT c.id, c.name, c.timezone, v.revision FROM clients c JOIN client_grants g ON c.tenant_id = g.tenant_id AND c.id = g.client_id JOIN client_versions v ON v.tenant_id=c.tenant_id AND v.client_id=c.id WHERE g.tenant_id = ? AND g.principal_id = ? AND (? IS NULL OR EXISTS (SELECT 1 FROM oauth_operator_clients oc WHERE oc.tenant_id=c.tenant_id AND oc.operator_id=? AND oc.client_id=c.id)) ORDER BY c.id LIMIT 100")
+        .bind(tenant, principal.id, principal.oauthOperatorId ?? null, principal.oauthOperatorId ?? null).all()).results;
     },
     async listMetrics(clientId: string) {
       await authorize(db, principal, clientId, "metrics:read");

@@ -7,6 +7,7 @@ export default defineConfig({
     name: "content-hub",
     entrypoint: "./src/index.ts",
     compatibilityDate: "2026-11-10",
+    compatibilityFlags: ["global_fetch_strictly_public"],
     previewUrls: false,
     // Preserve the two existing production domain mappings; never preview hosts.
     domains: [
@@ -17,6 +18,8 @@ export default defineConfig({
     env: {
       DB: bindings.d1({ name: "content-hub", id: "0c416a53-1eef-415b-9e81-db37f818922e" }),
       ASSETS: bindings.assets(),
+      OAUTH_KV: bindings.kv({ id: "b73d0f955c89428f99dc365680304dae" }),
+      MCP_OAUTH_ENABLED: bindings.text("true"),
       APP_ORIGIN: bindings.text("https://content.unreelviews.com"),
       INVITATIONS_ENABLED: bindings.text("false"),
       // Reference the already configured server secret; never store its value here.

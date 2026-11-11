@@ -42,3 +42,13 @@ The browser suite covers empty portal layouts, unavailable authentication, fragm
 ## Client/server session disagreement
 
 A Clerk browser session is not proof of workspace access. If `/api/session` does not verify it, the portal shows a bounded setup/session error with manual retry and sign-out instead of mounting SignIn again. SignIn also checks for an existing session immediately before mounting. Repeated listener updates for the same session do not restart boot, and superseded/session-changed responses are discarded. The invitation page keeps the same fail-closed behavior. Tests cover mismatch, signed-out, verified empty-workspace, listener repetition and session-end races. Live end-to-end authentication still requires browser verification.
+
+## MCP OAuth consent
+
+`/authorize` is a static consent shell. It preserves the OAuth request query only through a validated same-origin `/authorize` Clerk return. Signing in does not approve a connection. With a Clerk identity it fetches that full URL using `Accept: application/json` and a fresh Bearer token, and displays only the server-validated proposal. The backend must route HTML requests to this page and handle JSON requests itself.
+
+Proposal fields: `handle`, `client:{name,domain,redirectHost,isLoopback}`, `tenant:{id,name}`, `scopes:[{id,label,selected}]`, `clients:[{id,name,selected}]`, `expiresAt` (grant deadline), `consentExpiresAt` (short-lived confirmation deadline), optional `accessTokenExpiresInSeconds` and `refreshEnabled`. `redirectHost` includes any port. Every write permission, including separate new-client creation, and every client selection begins unchecked. Invitation, publishing and admin permissions are not supported by this UI.
+
+Explicit approval or denial sends `{handle,decision,scopes,clientIds}` by authenticated JSON POST to the same full `/authorize` URL. The server must enforce browser-bound one-use consent, identity, scope/client subsets, tenant policy and exact registered redirect. UI redirects only after the backend returns `redirectTo`, requiring the proposal's exact host and HTTPS (or actual HTTP loopback when declared). Handles and tokens are memory-only. Repeated submissions are blocked, session changes invalidate displayed consent, and uncertain submissions are not automatically retried. Leaving the page does not approve a connection.
+
+Local unit coverage includes safe return paths, supported proposal fields/scopes, unchecked write defaults, and redirect scheme/host constraints. Live Clerk/OAuth consent, cancellation and browser layout remain unverified until tested in an authorized configured environment. No live connections or credentials are created by these tests.

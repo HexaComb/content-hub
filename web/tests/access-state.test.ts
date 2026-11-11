@@ -23,7 +23,7 @@ test('repeated session listener updates do not restart boot',()=>{
 });
 test('SignIn is not mounted for an existing session or superseded asynchronous request',async()=>{
  const source=await readFile(new URL('../src/scripts/auth.ts',import.meta.url),'utf8');const mountSource=source.slice(source.indexOf('export async function mountSignIn'));
- const js=ts.transpileModule(`const getClerk=async()=>globalThis.__mountTestClerk;const location={origin:'https://example.invalid'};${mountSource}`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+ const js=ts.transpileModule(`const safeSignInReturn=(p,o)=>new URL(p,o).href;const getClerk=async()=>globalThis.__mountTestClerk;const location={origin:'https://example.invalid'};${mountSource}`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
  const g=globalThis as typeof globalThis&{__mountTestClerk:any};let mounts=0;let unmounts=0;g.__mountTestClerk={session:{id:'one'},mountSignIn:()=>mounts++,unmountSignIn:()=>unmounts++};
  try{const {mountSignIn}=await import(`data:text/javascript;base64,${Buffer.from(js).toString('base64')}`);assert.equal(await mountSignIn({},'/'),undefined);g.__mountTestClerk.session=null;assert.equal(await mountSignIn({},'/',()=>false),undefined);assert.equal(mounts,0);const cleanup=await mountSignIn({},'/');assert.equal(mounts,1);cleanup();assert.equal(unmounts,1);}finally{delete (g as Partial<typeof g>).__mountTestClerk;}
 });

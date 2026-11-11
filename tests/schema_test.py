@@ -11,7 +11,7 @@ class SchemaTests(unittest.TestCase):
         for tenant in ('a', 'b'):
             self.db.execute('INSERT INTO tenants VALUES (?,?)', (tenant, tenant))
             self.db.execute('INSERT INTO clients VALUES (?,?,?,?)', (tenant, 'client', 'Synthetic client', 'UTC'))
-            self.db.execute('INSERT INTO principals VALUES (?,?,?,?,?,?,?)', (tenant, 'agent', 'Test', tenant * 64, '2099-01-01T00:00:00Z', None, '["metrics:read"]'))
+            self.db.execute('INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,revoked_at,scopes_json) VALUES (?,?,?,?,?,?,?)', (tenant, 'agent', 'Test', tenant * 64, '2099-01-01T00:00:00Z', None, '["metrics:read"]'))
         self.db.execute("INSERT INTO metrics VALUES ('a','client','metric','arbitrary','Arbitrary number','custom','count','higher','custom','UTC','{}','Test-only definition','agent','2026-11-01T00:00:00Z')")
 
     def insert(self, revision=1, value=1, quality='complete', reason=None, tenant='a', key='key1'):
@@ -42,6 +42,20 @@ class SchemaTests(unittest.TestCase):
     def test_content_cannot_schedule_without_approval(self):
         with self.assertRaises(sqlite3.IntegrityError):
             self.db.execute("INSERT INTO content_items(tenant_id,client_id,id,channel,account_ref,title,caption,assets_json,status,scheduled_at,created_at,updated_at) VALUES ('a','client','post','instagram','demo','Draft','Caption','[]','scheduled','2026-11-15T12:00:00Z','2026-11-01T00:00:00Z','2026-11-01T00:00:00Z')")
+
+    def test_oauth_migration_preserves_existing_audit_and_kind_constraints(self):
+        self.insert()
+        self.db.commit()
+        for migration in sorted(SCHEMA.parent.glob('*.sql')):
+            if migration != SCHEMA:
+                self.db.executescript(migration.read_text())
+        self.assertEqual(self.db.execute('PRAGMA foreign_key_check').fetchall(), [])
+        self.assertEqual(self.db.execute("SELECT count(*) FROM observations WHERE recorded_by='agent'").fetchone()[0], 1)
+        self.assertEqual(self.db.execute("SELECT auth_kind FROM principals WHERE tenant_id='a'").fetchone()[0], 'service')
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute("UPDATE principals SET auth_kind='oauth' WHERE tenant_id='a'")
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute("UPDATE principals SET token_hash=? WHERE tenant_id='a'", ('oauth:' + '_' * 58,))
 
     def tearDown(self): self.db.close()
 

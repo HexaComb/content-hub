@@ -23,7 +23,7 @@ test('workspace transactions, grants, revisions, audit and isolation',async t=>{
  }
  for(const tenant of ['a','b']){
    await db.prepare('INSERT INTO tenants VALUES (?,?)').bind(tenant,tenant).run();
-   await db.prepare('INSERT INTO principals VALUES (?,?,?,?,?,?,?)').bind(tenant,'agent','agent',tenant.repeat(64),'2099-01-01',null,'[]').run();
+   await db.prepare('INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,revoked_at,scopes_json) VALUES (?,?,?,?,?,?,?)').bind(tenant,'agent','agent',tenant.repeat(64),'2099-01-01',null,'[]').run();
  }
  const p={tenantId:'a',id:'agent',scopes:['clients:write','projects:write','projects:read']};
  const client={clientId:'c',name:'Client',timezone:'UTC',expectedRevision:0 as const,idempotencyKey:'client-create'};

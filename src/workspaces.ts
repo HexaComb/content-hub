@@ -35,7 +35,7 @@ export async function createClient(db: D1Database, p: Principal, raw: CreateClie
   const result = {clientId:input.clientId,name:input.name,timezone:input.timezone,revision:1};
   return commit(db,p,'create_client',input,input.clientId,result,() => ({
     before:[db.prepare('INSERT INTO clients(tenant_id,id,name,timezone) VALUES(?,?,?,?)').bind(p.tenantId,input.clientId,input.name,input.timezone)],
-    after:[db.prepare('INSERT INTO client_grants(tenant_id,principal_id,client_id) VALUES(?,?,?)').bind(p.tenantId,p.id,input.clientId)],
+    after:[db.prepare('INSERT INTO client_grants(tenant_id,principal_id,client_id) VALUES(?,?,?)').bind(p.tenantId,p.id,input.clientId),...(p.oauthOperatorId ? [db.prepare('INSERT INTO oauth_operator_clients(tenant_id,operator_id,client_id) VALUES(?,?,?)').bind(p.tenantId,p.oauthOperatorId,input.clientId)] : [])],
   }));
 }
 export async function updateClient(db: D1Database, p: Principal, raw: UpdateClientInput) {

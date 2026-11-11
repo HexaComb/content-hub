@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {safeSignInReturn} from '../src/scripts/oauth-state.ts';
 import {adminEmptyMessage,adminReportPath} from '../src/scripts/admin-state.ts';
 test('admin empty states explain setup, never invitation access',()=>{
  assert.match(adminEmptyMessage({clients:0,projects:0,workspaces:0}),/administrator access is ready/);
@@ -19,8 +20,7 @@ test('root routes only a server-confirmed administrator; client view remains exp
  const source=readFileSync('web/src/scripts/dashboard.ts','utf8');assert.match(source,/api\/admin\/session/);assert.match(source,/admin.authenticated===true&&admin.role==='super_admin'/);assert.match(source,/location.replace\('\/admin'\)/);assert.match(source,/get\('view'\)!=='client'/);assert.doesNotMatch(source,/marco@|christian@/);
 });
 
-test('administrator sign-in returns only to a fixed local page',()=>{
- const source=readFileSync('web/src/scripts/auth.ts','utf8');
- assert.ok(source.includes("['/','/invite','/admin'].includes(returnPath)"));
- assert.ok(source.includes('forceRedirectUrl:location.origin+returnPath'));
+test('administrator sign-in returns only to the fixed admin page',()=>{
+ assert.equal(safeSignInReturn('/admin','https://reports.example.test'),'https://reports.example.test/admin');
+ assert.throws(()=>safeSignInReturn('/admin?redirect=https://evil.example.test','https://reports.example.test'));
 });

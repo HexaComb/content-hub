@@ -1,3 +1,4 @@
+import {safeSignInReturn} from './oauth-state';
 import type {Clerk} from '@clerk/clerk-js';
 import {validateAuthConfig,type AuthConfig} from './auth-config';
 export class AuthUnavailable extends Error {constructor(){super('Secure sign-in is unavailable. Ask your workspace administrator to check the Clerk configuration, then try again.');}}
@@ -15,10 +16,10 @@ export async function getClerk():Promise<Clerk>{
  })().catch(()=>{pending=undefined;throw new AuthUnavailable();});
  return pending;
 }
-export async function mountSignIn(node:HTMLDivElement,returnPath:'/'|'/invite'|'/admin',isCurrent:()=>boolean=()=>true){
- if(!['/','/invite','/admin'].includes(returnPath))throw new Error('Invalid sign-in return');
+export async function mountSignIn(node:HTMLDivElement,returnPath:string,isCurrent:()=>boolean=()=>true){
+ const returnUrl=safeSignInReturn(returnPath,location.origin);
  const clerk=await getClerk();
  if(!isCurrent()||clerk.session)return undefined;
- clerk.mountSignIn(node,{routing:'hash',forceRedirectUrl:location.origin+returnPath,signUpForceRedirectUrl:location.origin+returnPath,withSignUp:false,transferable:false,appearance:{elements:{footerAction:{display:'none'}}}});
+ clerk.mountSignIn(node,{routing:'hash',forceRedirectUrl:returnUrl,signUpForceRedirectUrl:returnUrl,withSignUp:false,transferable:false,appearance:{elements:{footerAction:{display:'none'}}}});
  return ()=>clerk.unmountSignIn(node);
 }

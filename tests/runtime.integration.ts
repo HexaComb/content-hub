@@ -23,7 +23,7 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
   for (const [tenant, token] of [["a", tokenA], ["b", tokenB]]) {
     await db.prepare("INSERT INTO tenants VALUES (?,?)").bind(tenant, "Synthetic agency").run();
     await db.prepare("INSERT INTO clients VALUES (?,?,?,?)").bind(tenant, "client", "Synthetic client", "UTC").run();
-    await db.prepare("INSERT INTO principals VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt","invitations:manage","invitations:send"]').run();
+    await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,revoked_at,scopes_json) VALUES (?,?,?,?,?,?,?)").bind(tenant, "agent", "Synthetic agent", await sha256(token), "2099-01-01T00:00:00Z", null, '["metrics:read","metrics:write","content:read","clients:write","projects:read","projects:write","content:write","content:approve","content:schedule","content:receipt","invitations:manage","invitations:send"]').run();
     await db.prepare("INSERT INTO client_grants VALUES (?,?,?)").bind(tenant, "agent", "client").run();
   }
   const call = async (name: string, args: Record<string, unknown>, token = tokenA) => {
@@ -39,6 +39,15 @@ test("Worker MCP, D1 ingestion and client isolation", async t => {
   await t.test("rejects missing credential and hostile browser origin", async () => {
     assert.equal((await mf.dispatchFetch("https://example.test/mcp")).status, 401);
     assert.equal((await mf.dispatchFetch("https://example.test/mcp", { headers: { Origin: "https://evil.example", Authorization: `Bearer ${tokenA}` } })).status, 403);
+  });
+  await t.test("OAuth fails closed without enablement, bindings and operator mapping", async () => {
+    for (const path of ['/authorize', '/oauth/token', '/.well-known/oauth-authorization-server', '/.well-known/oauth-protected-resource/mcp']) {
+      const response = await mf.dispatchFetch('https://content.unreelviews.com' + path, { headers: { Accept: 'application/json' } });
+      assert.equal(response.status, 503, path);
+      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    }
+    assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM oauth_delegations').first<{n:number}>())?.n, 0);
+    assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM oauth_operators').first<{n:number}>())?.n, 0);
   });
   const definition = { clientId: "client", key: "anything", label: "A custom score", category: "custom", unit: "score", direction: "higher", semantics: "custom", timezone: "UTC", dimensions: {}, definition: "Synthetic arbitrary monthly score" };
   const metric = decode(await call("define_metric", definition));

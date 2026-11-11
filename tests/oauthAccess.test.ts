@@ -1,0 +1,63 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile,readdir } from 'node:fs/promises';
+import { Miniflare } from 'miniflare';
+import { authenticate,authorize } from '../src/auth.ts';
+import { resolveOAuthPrincipal,validateSelection,getOperator,scopeArray } from '../src/oauthAccess.ts';
+import { sha256 } from '../src/domain.ts';
+import { repository } from '../src/repository.ts';
+import { createClient } from '../src/workspaces.ts';
+
+test('OAuth scopes are explicit subsets and exclude invitation/approval authority',()=>{
+ assert.throws(()=>scopeArray('["invitations:send"]'));
+ assert.throws(()=>validateSelection(['mcp:connect'],['mcp:connect','clients:write'],['mcp:connect','clients:write'],[],[]));
+ assert.throws(()=>validateSelection(['mcp:connect'],['mcp:connect'],['mcp:connect'],['a'],['b']));
+ assert.throws(()=>validateSelection(['mcp:connect'],['mcp:connect'],['mcp:connect','mcp:connect'],[],[]));
+ validateSelection(['mcp:connect'],['mcp:connect'],['mcp:connect'],[],[]);
+});
+test('OAuth identity, principal kinds, expiry, client mapping and atomic new-client grants',async t=>{
+ const mf=new Miniflare({workers:[{config:{name:'oauth-access-test',compatibilityDate:'2026-11-10',manifest:{mainModule:'index.js',modules:{'index.js':{type:'esm',contents:'export default {fetch(){return new Response("ok")}}'}}},env:{DB:{type:'d1',name:'oauth-access'}}}}]});
+ t.after(()=>mf.dispose());const db=await mf.getD1Database('DB') as unknown as D1Database;
+ for(const file of (await readdir('migrations')).filter(f=>f.endsWith('.sql')).sort()) {
+  let sql=(await readFile('migrations/'+file,'utf8')).split('\n').filter(l=>!l.trimStart().startsWith('--')).join('\n');
+  const triggers=sql.match(/CREATE TRIGGER[\s\S]*?END;/g)??[];for(const trigger of triggers)sql=sql.replace(trigger,'');
+  for(const statement of sql.split(';').map(s=>s.trim()).filter(Boolean))await db.prepare(statement).run();for(const trigger of triggers)await db.prepare(trigger).run();
+ }
+ const token='synthetic_test_'+crypto.randomUUID().replaceAll('-','');
+ await db.prepare("INSERT INTO tenants VALUES('a','Agency')").run();
+ await db.prepare("INSERT INTO clients VALUES('a','one','Client One','UTC')").run();
+ await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,scopes_json) VALUES('a','service','Service',?,'2099-01-01','[]')").bind(await sha256(token)).run();
+ const scopes=['mcp:connect','clients:write','metrics:read'];
+ await db.prepare("INSERT INTO oauth_operators VALUES('operator','a','https://identity.test','user_1','marco@hexacombllc.com',?,'2099-01-01',NULL)").bind(JSON.stringify(scopes)).run();
+ await db.prepare("INSERT INTO oauth_operator_clients VALUES('a','operator','one')").run();
+ await db.prepare("INSERT INTO principals(tenant_id,id,name,token_hash,expires_at,scopes_json,auth_kind) VALUES('a','oauthprincipal','OAuth',?,'2099-01-01',?,'oauth')").bind('oauth:synthetic'.padEnd(64,'_'),JSON.stringify(scopes)).run();
+ await db.prepare("INSERT INTO oauth_delegations VALUES('delegation','a','operator','oauthprincipal','https://client.test/metadata',NULL,'2026-01-01','2099-01-01',NULL)").run();
+ await db.prepare("INSERT INTO client_grants VALUES('a','oauthprincipal','one')").run();
+ const identity={issuer:'https://identity.test',subject:'user_1',sessionId:'session',email:'marco@hexacombllc.com'};
+ assert.ok(await getOperator(db,identity));assert.equal(await getOperator(db,{...identity,subject:'user_2'}),null);assert.equal(await getOperator(db,{...identity,email:'christian@unreelviews.com'}),null);
+ assert.equal((await authenticate(new Request('https://test/',{headers:{Authorization:`Bearer ${token}`}}),db))?.id,'service');
+ assert.equal(await authenticate(new Request('https://test/',{headers:{Authorization:'Bearer '+ 'oauth:synthetic'.padEnd(64,'_')}}),db),null);
+ await assert.rejects(db.prepare("UPDATE principals SET token_hash=? WHERE id='oauthprincipal'").bind(await sha256(token+'x')).run());
+ const resolve=()=>resolveOAuthPrincipal(db,{delegationId:'delegation'},'https://client.test/metadata','operator',scopes);
+ assert.equal(await resolveOAuthPrincipal(db,{delegationId:'delegation'},'https://evil.test/metadata','operator',scopes),null);
+ assert.equal(await resolveOAuthPrincipal(db,{delegationId:'delegation'},'https://client.test/metadata','other',scopes),null);
+ const p=(await resolve())!;assert.ok(p);await authorize(db,p,'one','metrics:read');
+ assert.equal((await repository(db,p).listClients()).length,1);
+ await db.prepare("DELETE FROM oauth_operator_clients WHERE client_id='one'").run();
+ await assert.rejects(authorize(db,p,'one','metrics:read'));
+ assert.equal((await repository(db,p).listClients()).length,0);
+ await createClient(db,p,{clientId:'new',name:'New',timezone:'UTC',expectedRevision:0,idempotencyKey:'synthetic-create-client'});
+ await authorize(db,p,'new','metrics:read');
+ assert.equal((await repository(db,p).listClients()).length,1);
+ assert.ok(await db.prepare("SELECT 1 FROM workspace_events WHERE operation='create_client' AND principal_id='oauthprincipal'").first());
+ await db.prepare("UPDATE oauth_operators SET scopes_json='[\"mcp:connect\"]' WHERE id='operator'").run();
+ assert.deepEqual((await resolve())?.scopes,['mcp:connect']);
+ await db.prepare("UPDATE oauth_operators SET revoked_at='2026-01-01' WHERE id='operator'").run();assert.equal(await resolve(),null);
+ await db.prepare("UPDATE oauth_operators SET revoked_at=NULL, expires_at='2000-01-01' WHERE id='operator'").run();assert.equal(await resolve(),null);
+ await db.prepare("UPDATE oauth_operators SET expires_at='2099-01-01' WHERE id='operator'").run();
+ await db.prepare("UPDATE oauth_delegations SET revoked_at='2026-01-01' WHERE id='delegation'").run();assert.equal(await resolve(),null);
+ await assert.rejects(db.prepare("UPDATE oauth_delegations SET principal_id='service' WHERE id='delegation'").run());
+ await assert.rejects(db.prepare("UPDATE oauth_operators SET identity_subject='user_2' WHERE id='operator'").run());
+ await db.prepare("INSERT INTO oauth_delegations VALUES('service-delegation','a','operator','service','https://client.test/metadata',NULL,'2026-01-01','2099-01-01',NULL)").run();
+ assert.equal(await resolveOAuthPrincipal(db,{delegationId:'service-delegation'},'https://client.test/metadata','operator',scopes),null);
+});
